@@ -1,0 +1,18 @@
+{% extends 'draw/base.html' %}
+
+{% block title %}Projects{% endblock %}
+{% block detail_panel %}
+    <h1> Your Projects</h1>
+{% endblock %}
+
+{% block list_panel %}
+    {% if projects %}
+    <ul>
+        {% for project in projects %}
+        <li><a href="{% url 'draw:project_detail' project.id %}">{{ project.title }}</a></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <h3>No projects present, not even the default project :(</h3>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,31 @@
+body{
+    background: lightslategrey url("../images/background.jpg");
+    font-family: 'Popins', sans-serif;
+    padding-top: 74px;
+}
+a.website-logo{
+    font-family: 'Shadows Into Light', cursive;
+    font-size: 2em;
+}
+.detail-panel{
+    background-color: #c1c1c1;
+    padding-top: 20px;
+    border-right: 1px solid black;
+    min-height: 85vh;
+}
+.list-panel{
+    background-color: #c1c1c1;
+    padding-top: 20px;
+    min-height: 85vh;
+}
+.site-footer{
+    background-color: #1b1e21;
+    min-height: 7.5vh;
+    text-align: center;
+    padding-top: 15px;
+}
+span.sig{
+    font-family: 'Shadows Into Light', cursive;
+    font-size: 20px;
+    color: #c1c1c1;
+}

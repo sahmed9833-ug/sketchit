@@ -1,0 +1,21 @@
+{% extends 'draw/base.html' %}
+{% block title %}{{ project }}{% endblock %}
+{% block detail_panel %}
+    <h1>{{ project }}</h1>
+{% endblock %}
+
+{% block list_panel %}
+        {% if drawings %}
+            <ul>
+            {% for drawing in drawings %}
+                <li>{{ drawing.title }}
+                {% if drawing.is_pinned %}
+                    <img src="https://i.imgur.com/bv2dRIc.png"/>
+                {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <h2>This project has no drawings :(</h2>
+        {% endif %}
+{% endblock %}
