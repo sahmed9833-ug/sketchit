@@ -2,17 +2,28 @@
 
 {% block title %}Projects{% endblock %}
 {% block detail_panel %}
-    <h1> Your Projects</h1>
+    <h2 style="text-align: center"> Details</h2>
 {% endblock %}
 
 {% block list_panel %}
     {% if projects %}
-    <ul>
-        {% for project in projects %}
-        <li><a href="{% url 'draw:project_detail' project.id %}">{{ project.title }}</a></li>
-        {% endfor %}
-    </ul>
+        <h3>Projects</h3>
+        <div class="list-group bg-transparent">
+            {% for project in projects %}
+            <a class="list-group-item list-group-item-action flex-column align-items-start" href="{% url 'draw:project_detail' project.id %}">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1>">{{ project.title }}</h5>
+                    <small>2 days ago</small>
+
+                </div>
+                {% if project.shared == True %}
+                        <span class="badge badge-primary badge-pill" style="float: right">Shared</span>
+                    {% endif %}
+                <p>Some info</p>
+            </a>
+            {% endfor %}
+        </div>
     {% else %}
-    <h3>No projects present, not even the default project :(</h3>
+        <h3>No projects present, not even the default project :(</h3>
     {% endif %}
 {% endblock %}

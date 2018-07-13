@@ -1,5 +1,8 @@
 {% extends 'draw/base.html' %}
 {% block title %}{{ project }}{% endblock %}
+{% block detail_panel %}
+    <h2 style="text-align: center">{{ project }} - {{ drawing }}</h2>
+{% endblock %}
 {% block body %}
-    <h1>{{ project }} - {{ drawing }}</h1>
+
 {% endblock %}
