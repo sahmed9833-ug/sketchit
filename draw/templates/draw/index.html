@@ -1,11 +1,15 @@
 {% extends 'draw/base.html' %}
 
 {% block title %}Projects{% endblock %}
+{% block index_active %}active{% endblock %}
 {% block detail_panel %}
     <h2 style="text-align: center"> Details</h2>
 {% endblock %}
 
 {% block list_panel %}
+
+<!-- TODO: User should have option to display either projects or drawings, implement this either via view, or javascript/bootstrap here -->
+
     {% if projects %}
         <h3>Projects</h3>
         <div class="list-group bg-transparent">

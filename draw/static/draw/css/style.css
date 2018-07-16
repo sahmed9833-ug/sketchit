@@ -8,13 +8,13 @@ a.website-logo{
     font-size: 2em;
 }
 .detail-panel{
-    background-color: #c1c1c1;
+    background-color: rgba(193,193,193,0.5);
     padding-top: 20px;
     border-right: 1px solid black;
     min-height: 85vh;
 }
 .list-panel{
-    background-color: #c1c1c1;
+    background-color: rgba(193,193,193,0.5);
     padding-top: 20px;
     min-height: 85vh;
 }

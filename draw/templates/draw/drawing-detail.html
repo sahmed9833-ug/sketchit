@@ -1,8 +1,10 @@
 {% extends 'draw/base.html' %}
 {% block title %}{{ project }}{% endblock %}
+<!-- TODO: Consider having a 'scripts' block, so that fabric is only loaded where it's needed. -->
 {% block detail_panel %}
     <h2 style="text-align: center">{{ project }} - {{ drawing }}</h2>
+<!-- TODO: Controls for the drawing document, such as text boxes to display/alter name, description etc. Also list of other drawings in project. -->
 {% endblock %}
 {% block body %}
-
+<!-- TODO: Implement canvas with Fabric.js -->
 {% endblock %}

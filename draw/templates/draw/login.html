@@ -1,0 +1,28 @@
+{% extends 'draw/base.html' %}
+
+{% block title %}Log In{% endblock %}
+{% block login_active %}active{% endblock %}
+
+{% block detail_panel %}
+    <h2 style="text-align: center">Log In</h2>
+    {% if error_message %}
+    <p><strong>{{ error_message }}</strong></p>
+    {% endif %}
+    <form action="{% url 'draw:login_user' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" class="form-control" name="username" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" class="form-control" name="password" placeholder="Password">
+        </div>
+        <br>
+         <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+{% endblock %}
+
+{% block list_panel %}
+    <h2>Information</h2>
+{% endblock %}

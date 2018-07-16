@@ -12,13 +12,13 @@
         <property name="enable_load_extension" value="true" />
       </driver-properties>
     </data-source>
-    <data-source source="LOCAL" name="Django default" uuid="57dae9a1-e652-48be-8e40-6d0acab2b92b">
+    <data-source source="LOCAL" name="Django default" uuid="812db0e0-20f4-40e8-88f2-6800e6eaec68">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <imported>true</imported>
       <remarks>$PROJECT_DIR$/sketchit/settings.py</remarks>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db.sqlite3</jdbc-url>
+      <jdbc-url>jdbc:sqlite:D:\Google Drive\Computing Science\- Masters Development Project\Development\sketchit\db.sqlite3</jdbc-url>
       <driver-properties>
         <property name="enable_load_extension" value="true" />
       </driver-properties>

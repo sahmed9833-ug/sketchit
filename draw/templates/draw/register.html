@@ -1,0 +1,17 @@
+{% extends 'draw/base.html' %}
+
+{% block title %}Register{% endblock %}
+{% block register_active %}active{% endblock %}
+
+{% block detail_panel %}
+    <h2 style="text-align: center">Create a New Account</h2>
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% include 'draw/form-template.html' %}
+         <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+{% endblock %}
+
+{% block list_panel %}
+    <h2>Information</h2>
+{% endblock %}
