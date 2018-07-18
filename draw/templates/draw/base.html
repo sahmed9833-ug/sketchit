@@ -2,14 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} - Draw</title>
     {% load staticfiles %}
+    <link rel="shortcut icon" href="http://icons.iconarchive.com/icons/custom-icon-design/pretty-office-10/512/Pencil-icon.png">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="{% static 'draw/css/style.css' %}">
     <link href="https://fonts.googleapis.com/css?family=Poppins|Shadows+Into+Light" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
 </head>
 <body>
+    {% block scripts %}{% endblock %}
     <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand website-logo" href="{% url 'home' %}">Sketch-It-Yourself. </a>
         <!-- Nav bar toggle and logo -->
@@ -20,9 +23,9 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <!-- left side -->
             <ul class="navbar-nav mr-auto">
-                <li class="nav-item"><a class="nav-link" href="{% url 'draw:index' %}"><i class="fas fa-project-diagram" aria-hidden="true"></i>&nbsp; Projects <span class="sr-only">(current)</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'draw:project_detail' 1 %}"><i class="fas fa-chalkboard" aria-hidden="true"></i>&nbsp; Drawings</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-plus"></i>&nbsp; New Drawing</a></li>
+                <li class="nav-item {% block index_active %}{% endblock %}"><a class="nav-link" href="{% url 'draw:index' %}"><i class="fas fa-project-diagram" aria-hidden="true"></i>&nbsp; Projects <span class="sr-only">(current)</span></a></li>
+                <li class="nav-item {% block project_active %}{% endblock %}"><a class="nav-link" href="{% url 'draw:project_detail' 1 %}"><i class="fas fa-chalkboard" aria-hidden="true"></i>&nbsp; Drawings</a></li>
+                <li class="nav-item {% block drawing_active %}{% endblock %}"><a class="nav-link" href="{% url 'draw:drawing_detail' 1 1 %}"><i class="fas fa-plus"></i>&nbsp; New Drawing</a></li>
             </ul>
             <!-- right side -->
             <ul class="navbar-nav">
@@ -42,7 +45,7 @@
             {% endblock %}
 
             </div>
-            <div class="col-md-9 list-panel">
+            <div id="list-panel" class="col-md-9 list-panel">
                 {% block list_panel %}
                 {% endblock %}
                 <br>

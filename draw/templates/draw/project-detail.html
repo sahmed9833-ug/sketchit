@@ -1,5 +1,7 @@
 {% extends 'draw/base.html' %}
 {% block title %}{{ project }}{% endblock %}
+{% block project_active %}active{% endblock %}
+
 {% block detail_panel %}
     <h2 style="text-align: center">{{ project }}</h2>
 <!-- TODO: Add more info here, such as whether or not it's shared and with whom. -->
@@ -7,12 +9,12 @@
 
 {% block list_panel %}
         {% if drawings %}
-            <h2>Drawings</h2>
+            <h2>Drawings</h2><br>
             <div class="d-flex flex-wrap align-content-start">
                 {% for drawing in drawings %}
                     <div class="p-2 border" style="text-align: center">
-                        <a href="{% url 'draw:drawing_detail' project.id drawing.id %}">
-                            <img src="http://images1.wikia.nocookie.net/__cb20110517050051/awesomeanimeandmanga/images/3/34/K-on!-avatar-200x200.jpg">
+                        <a style="color: #1b1e21" href="{% url 'draw:drawing_detail' project.id drawing.id %}">
+                            <img src="http://images1.wikia.nocookie.net/__cb20110517050051/awesomeanimeandmanga/images/3/34/K-on!-avatar-200x200.jpg" style="padding-bottom: 10px">
                             <br>
                             {{ drawing.title }}
                             {% if drawing.is_pinned %}

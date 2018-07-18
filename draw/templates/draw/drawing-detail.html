@@ -1,10 +1,164 @@
 {% extends 'draw/base.html' %}
-{% block title %}{{ project }}{% endblock %}
-<!-- TODO: Consider having a 'scripts' block, so that fabric is only loaded where it's needed. -->
+{% block title %}{{ drawing }}{% endblock %}
+{% block drawing_active %}active{% endblock %}
+
+{% block scripts %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.22/fabric.min.js"></script>
+{% endblock %}
+
 {% block detail_panel %}
-    <h2 style="text-align: center">{{ project }} - {{ drawing }}</h2>
+    <h2 style="text-align: center">{{ drawing }} <span class="badge badge-secondary">{{ project }}</span></h2>
 <!-- TODO: Controls for the drawing document, such as text boxes to display/alter name, description etc. Also list of other drawings in project. -->
 {% endblock %}
-{% block body %}
-<!-- TODO: Implement canvas with Fabric.js -->
+
+{% block list_panel %}
+    <button id="freeDraw" type="button" class="btn" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
+    <button id="drawRect" type="button" class="btn" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
+    <button id ="drawCirc" type="button" class="btn" onclick="addCircle()" title="Free Draw"><i class="far fa-circle"></i></button>
+    <br><br>
+    <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
+    <script>
+        //  TODO: Strongly consider putting all of this into its own js file.
+
+        //  initialise canvas and variables for drawing shapes
+        var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa', selection: false});
+        var drawingRect = false;
+        var drawingCircle = false;
+        var rect, circ, isDown, origX, origY;
+        var grid = 20;
+
+        //  create grid
+        for (var i = 0; i < (800 / grid); i++) {
+          canvas.add(new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false }));
+          canvas.add(new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false }))
+        }
+
+        canvas.renderAll();
+
+        function addRectangle(){
+            drawingRect = !drawingRect;
+            drawingCircle = false;
+
+            if (drawingRect){
+                document.getElementById("drawRect").className += " btn-dark";
+            }
+            else{
+                document.getElementById("drawRect").className = "btn";
+            }
+        }
+
+        function addCircle(){
+            drawingCircle = !drawingCircle;
+            drawingRect = false;
+
+            if (drawingCircle){
+                document.getElementById("drawCirc").className += " btn-dark";
+            }
+            else{
+                document.getElementById("drawCirc").className = "btn";
+            }
+        }
+
+        function setDrawingMode() {
+            canvas.isDrawingMode = !canvas.isDrawingMode;
+
+            if (canvas.isDrawingMode){
+                document.getElementById("freeDraw").className += " btn-dark";
+            }
+            else{
+                document.getElementById("freeDraw").className = "btn";
+            }
+        }
+
+        //  what to do when mouse button is down
+        canvas.on('mouse:down', function(o){
+            isDown = true;
+            var pointer = canvas.getPointer(o.e);
+            origX = pointer.x;
+            origY = pointer.y;
+
+            if (drawingRect){
+                rect = new fabric.Rect({
+                left: origX,
+                top: origY,
+                originX: 'left',
+                originY: 'top',
+                width: pointer.x-origX,
+                height: pointer.y-origY,
+                angle: 0,
+                fill: 'rgba(0,0,0,0)',
+                stroke: 'black'
+                });
+                canvas.add(rect);
+            }
+            if (drawingCircle){
+                circ = new fabric.Circle({
+                    left: origX,
+                    top: origY,
+                    originX: 'left',
+                    originY: 'top',
+                    radius: (pointer.x-origX)/2,
+                    fill: 'rgba(0,0,0,0)',
+                    stroke: 'black'
+                });
+                canvas.add(circ);
+            }
+        });
+
+        //  what to do when the mouse moves, will not do anything if mouse is not down
+        canvas.on('mouse:move', function(o){
+            if (!isDown) return;
+            var pointer = canvas.getPointer(o.e);
+            if (drawingRect){
+                if(origX>pointer.x){
+                rect.set({ left: Math.abs(pointer.x) });
+                }
+                if(origY>pointer.y){
+                    rect.set({ top: Math.abs(pointer.y) });
+                }
+
+                rect.set({ width: Math.abs(origX - pointer.x) });
+                rect.set({ height: Math.abs(origY - pointer.y) });
+
+
+                canvas.renderAll();
+            }
+            if (drawingCircle){
+                if(origX>pointer.x){
+                circ.set({ left: Math.abs(pointer.x) });
+                }
+                if(origY>pointer.y){
+                    circ.set({ top: Math.abs(pointer.y) });
+                }
+
+                circ.set({ radius: Math.abs((origX - pointer.x)/2) });
+
+
+                canvas.renderAll();
+            }
+
+        });
+
+        //  what do when mouse button is lifted
+        canvas.on('mouse:up', function(o){
+            isDown = false;
+            if(drawingRect)
+                rect.setCoords();
+            else if (drawingCircle)
+                circ.setCoords();
+        });
+
+        function saveJSON(){
+            console.log(JSON.stringify(canvas));
+            //drawing_file = canvas.toJSON();
+            drawing_file = JSON.stringify(canvas);
+        }
+
+        function loadJSON(){
+            canvas.clear();
+
+            canvas.loadFromJSON(drawing_file);
+        }
+
+    </script>
 {% endblock %}
