@@ -3,7 +3,12 @@
 {% block title %}Projects{% endblock %}
 {% block index_active %}active{% endblock %}
 {% block detail_panel %}
-    <h2 style="text-align: center"> Details</h2>
+    <h3 style="text-align: center"> Create a New Project</h3>
+    <form action="" method="post" enctype="multipart/form-data" style="padding: 10px">
+        {% csrf_token %}
+        {% include 'draw/form-template.html' %}
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
 {% endblock %}
 
 {% block list_panel %}
@@ -23,11 +28,32 @@
                 {% if project.shared == True %}
                         <span class="badge badge-primary badge-pill" style="float: right">Shared</span>
                     {% endif %}
-                <p>Some info</p>
+                <p>{{ project.summary }}</p>
             </a>
             {% endfor %}
+        <br>
+
         </div>
     {% else %}
         <h3>No projects present, not even the default project :(</h3>
     {% endif %}
 {% endblock %}
+
+<!--<div class="form-row align-items-center">
+                    <div class="col-auto">
+                        <input type="text" class="form-control" placeholder="Title" name="title">
+                    </div>
+                    <div class="col-auto">
+                        <input type="text" class="form-control" placeholder="Summary" name="summary">
+                    </div>
+                    <div class="col-auto">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="shared" name="shared">
+                            <label class="form-check-label" for="shared">Shared</label>
+                        </div>
+                    </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </div>
+                    </div>
+                </div>-->

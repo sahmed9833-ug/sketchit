@@ -25,6 +25,13 @@ a.website-logo{
     text-align: center;
     padding-top: 15px;
 }
+form.rudi{
+    background-color: rgba(33,35,38,0.85);
+    padding: 10px;
+    border-radius: 7px;
+    width: fit-content;
+    color: #c1c1c1;
+}
 span.sig{
     font-family: 'Shadows Into Light', cursive;
     font-size: 20px;

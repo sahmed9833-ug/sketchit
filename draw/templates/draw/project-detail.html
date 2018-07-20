@@ -12,9 +12,9 @@
             <h2>Drawings</h2><br>
             <div class="d-flex flex-wrap align-content-start">
                 {% for drawing in drawings %}
-                    <div class="p-2 border" style="text-align: center">
-                        <a style="color: #1b1e21" href="{% url 'draw:drawing_detail' project.id drawing.id %}">
-                            <img src="http://images1.wikia.nocookie.net/__cb20110517050051/awesomeanimeandmanga/images/3/34/K-on!-avatar-200x200.jpg" style="padding-bottom: 10px">
+                    <div class="p-2" style="text-align: center; background: rgba(33,35,38,0.85); border-radius: 5px; margin-right: 15px; margin-bottom: 15px">
+                        <a style="color: #c1c1c1" href="{% url 'draw:drawing_detail' project.id drawing.id %}">
+                            <img src="https://static.umotive.com/img/product_image_thumbnail_placeholder.png" width="200" height="200" style="padding-bottom: 10px">
                             <br>
                             {{ drawing.title }}
                             {% if drawing.is_pinned %}

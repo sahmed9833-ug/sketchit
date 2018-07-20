@@ -1,14 +1,55 @@
 {% extends 'draw/base.html' %}
-{% block title %}{{ drawing }}{% endblock %}
-{% block drawing_active %}active{% endblock %}
-
+{% block title %}{% if drawing %}{{ drawing }}{% else %}New Drawing{% endif %}{% endblock %}
+{% block drawing_link %}
+    {% if drawing %}
+        <li class="nav-item active"><a class="nav-link" href="{% url 'draw:drawing_detail' 1 drawing.id  %}"><i class="fas fa-image"></i>&nbsp; {{ drawing }}</a></li>
+    {% endif %}
+{% endblock %}
+{% block new_drawing_active %}
+    {% if not drawing %}
+    active
+    {% endif %}
+{% endblock %}
 {% block scripts %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.22/fabric.min.js"></script>
 {% endblock %}
 
 {% block detail_panel %}
-    <h2 style="text-align: center">{{ drawing }} <span class="badge badge-secondary">{{ project }}</span></h2>
-<!-- TODO: Controls for the drawing document, such as text boxes to display/alter name, description etc. Also list of other drawings in project. -->
+    {% if not drawing %}<h3 style="text-align: center">New Drawing</h3>{% endif %}
+    <form action="" method="post" enctype="multipart/form-data" style="padding: 10px">
+    {% csrf_token %}
+        <div class="form-row">
+            <div class="col-auto">
+                {{ form.title }}
+            </div>
+            <div class="col-auto">
+                {{ form.project }}
+            </div>
+        </div><br>
+        <div class="form-row">
+            <div class="col">
+                {{ form.description }}
+            </div>
+        </div><br>
+        <div class="form-row">
+            <div class="col-auto">
+                <label for="">{{ form.is_pinned.label_tag }}</label>
+            </div>
+            <div class="col-auto">
+                {{ form.is_pinned }}
+            </div>
+        </div><br>
+        <div class="form-row">
+            {{ form.json_string }}
+        </div><br>
+        <div class="form-row">
+            <button type="button" class="btn btn-primary" onclick="saveJSON()" href="#">Save Drawing</button>&nbsp;
+            <button type="button" class="btn btn-primary" onclick="loadJSON()" href="#">Load Drawing</button>&nbsp;
+        </div><br>
+        <div class="form-row">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
 {% endblock %}
 
 {% block list_panel %}
@@ -25,15 +66,36 @@
         var drawingRect = false;
         var drawingCircle = false;
         var rect, circ, isDown, origX, origY;
+        var drawing_serial;
         var grid = 20;
+        loadJSON();
+        renderGrid();
+        canvas.renderAll();
 
-        //  create grid
-        for (var i = 0; i < (800 / grid); i++) {
-          canvas.add(new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false }));
-          canvas.add(new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false }))
+        function saveJSON(){
+            drawing_serial = JSON.stringify(canvas);
+
+            document.getElementById('id_json_string').value= drawing_serial;
         }
 
-        canvas.renderAll();
+        function loadJSON(){
+
+            canvas.loadFromJSON({{ drawing.json_string | safe }});
+            renderGrid();
+        }
+
+        //  create grid
+        function renderGrid(){
+            console.log("Rendering grid");
+            for (var i = 0; i < (800 / grid); i++) {
+                var lineH = new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true });
+                var lineV = new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true });
+                canvas.add(lineH);
+                canvas.add(lineV);
+                canvas.sendToBack(lineH);
+                canvas.sendToBack(lineV);
+            }
+        }
 
         function addRectangle(){
             drawingRect = !drawingRect;
@@ -148,17 +210,7 @@
                 circ.setCoords();
         });
 
-        function saveJSON(){
-            console.log(JSON.stringify(canvas));
-            //drawing_file = canvas.toJSON();
-            drawing_file = JSON.stringify(canvas);
-        }
 
-        function loadJSON(){
-            canvas.clear();
-
-            canvas.loadFromJSON(drawing_file);
-        }
 
     </script>
 {% endblock %}

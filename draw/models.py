@@ -13,6 +13,9 @@ class Project(models.Model):
     summary = models.CharField(default='No summary', max_length=1000, blank=True, null=True)
     shared = models.BooleanField(default=False)
 
+    def get_absolute_url(self):
+        return reversed('draw/')
+
     def __str__(self):
         return self.title
 
@@ -23,7 +26,7 @@ class Drawing(models.Model):
     description = models.CharField(default='No description', max_length=1000, blank=True, null=True)
     last_modified = models.DateField(auto_now=True)
     is_pinned = models.BooleanField(default=False)
-    json_string = models.CharField(default='JSON goes here', max_length=1000)
+    json_string = models.TextField(default='JSON goes here')
 
     def __str__(self):
         return self.title

@@ -2,7 +2,9 @@
 
     <div class="form-group">
         <span class="text-danger small">{{ field.errors }}</span>
-        <label for="">{{ field.label_tag }}</label>
+        {% if "Shared" in field.label_tag %}
+            <label for="">{{ field.label_tag }}</label>
+        {% endif %}
         {{ field }}
     </div>
 {% endfor %}
