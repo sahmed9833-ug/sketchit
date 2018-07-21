@@ -65,8 +65,6 @@ def drawing_detail(request, project_id, drawing_id):
 
 
 def new_drawing(request, project_id, new):
-    # TODO: Add a new function here which would load drawing detail but for a new drawing
-    # TODO: Add a new function which would load drawing detail for a new drawing that does not yet belong to a project
     if request.user.is_authenticated:
         form = DrawingForm(request.POST or None)
         project = get_object_or_404(Project, pk=project_id)

@@ -25,12 +25,14 @@ class ProjectForm(forms.ModelForm):
 
 class DrawingForm(forms.ModelForm):
     title = forms.CharField(widget=forms.TextInput(attrs={'placeholder': "Title", 'class': "form-control"}))
-    project = forms.ModelChoiceField(widget=forms.Select(attrs={'class': "form-control"}), queryset=Project.objects)
+    project = forms.ModelChoiceField(widget=forms.Select(
+        attrs={'class': "form-control"}),
+        queryset=Project.objects,
+        initial="Default")
     description = forms.CharField(widget=forms.TextInput(attrs={'placeholder': "Description", 'class': "form-control"}))
     is_pinned = forms.BooleanField(widget=forms.CheckboxInput, required=False)
     json_string = forms.CharField(widget=forms.Textarea(attrs={'class': "form-control"}))
 
     class Meta:
         model = Drawing
-        #  TODO: Consider also excluding JSON_String field,
         exclude = ('last_modified',)

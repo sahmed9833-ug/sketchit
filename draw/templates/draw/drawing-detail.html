@@ -53,23 +53,37 @@
 {% endblock %}
 
 {% block list_panel %}
-    <button id="freeDraw" type="button" class="btn" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
-    <button id="drawRect" type="button" class="btn" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
-    <button id ="drawCirc" type="button" class="btn" onclick="addCircle()" title="Free Draw"><i class="far fa-circle"></i></button>
-    <br><br>
+    <div class="row">
+        <div class="col-4">
+            <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractive()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
+            <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
+            <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
+            <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
+        </div>
+        <div class="col-2">
+
+        </div>
+        <div class="col-4">
+            <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Delete selected object"><i class="fas fa-trash-alt"></i></button>&nbsp;
+            <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="deleteSelected()" title="Clear canvas"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <br>
     <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
     <script>
         //  TODO: Strongly consider putting all of this into its own js file.
 
         //  initialise canvas and variables for drawing shapes
-        var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa', selection: false});
+        var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa'});
         var drawingRect = false;
         var drawingCircle = false;
+        var canvasInteractive = true;
         var rect, circ, isDown, origX, origY;
         var drawing_serial;
         var grid = 20;
         loadJSON();
         renderGrid();
+        setInteractive();
         canvas.renderAll();
 
         function saveJSON(){
@@ -85,6 +99,7 @@
         }
 
         //  create grid
+        //  TODO: Consider putting up a background image rather than doing this
         function renderGrid(){
             console.log("Rendering grid");
             for (var i = 0; i < (800 / grid); i++) {
@@ -105,7 +120,7 @@
                 document.getElementById("drawRect").className += " btn-dark";
             }
             else{
-                document.getElementById("drawRect").className = "btn";
+                document.getElementById("drawRect").className = "btn btn-light";
             }
         }
 
@@ -128,8 +143,30 @@
                 document.getElementById("freeDraw").className += " btn-dark";
             }
             else{
-                document.getElementById("freeDraw").className = "btn";
+                document.getElementById("freeDraw").className = "btn btn-light";
             }
+        }
+
+        function setInteractive(){
+            if (canvasInteractive){
+                canvas.forEachObject(function(object){
+                    object.selectable = false
+                });
+                canvasInteractive = false;
+                document.getElementById("canvasInteract").className = "btn btn-light"
+            }
+            else{
+                canvas.forEachObject(function(object){
+                    object.selectable = true
+                });
+                canvasInteractive = true;
+                document.getElementById("canvasInteract").className += " btn-dark";
+            }
+        }
+
+        function deleteSelected(){
+            canvas.remove(canvas.getActiveObject());
+            canvas.renderAll();
         }
 
         //  what to do when mouse button is down
