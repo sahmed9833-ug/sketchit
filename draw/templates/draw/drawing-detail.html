@@ -50,6 +50,15 @@
             <button type="submit" class="btn btn-primary">Submit</button>
         </div>
     </form>
+    {% if drawing %}
+    <div class="col-auto">
+    <form action="{% url 'draw:delete_drawing' drawing.project.id drawing.id 'delete' %}" method="post" class="form-group form-row">
+        {% csrf_token %}
+        <input type="hidden" name="drawing_id" value="{{ drawing.id }}">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?');">Delete</button>
+    </form>
+    </div>
+    {% endif %}
 {% endblock %}
 
 {% block list_panel %}

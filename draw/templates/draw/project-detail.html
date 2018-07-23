@@ -5,6 +5,13 @@
 {% block detail_panel %}
     <h2 style="text-align: center">{{ project }}</h2>
 <!-- TODO: Add more info here, such as whether or not it's shared and with whom. -->
+    <div class="col-auto">
+    <form action="{% url 'draw:delete_project' 'delete_project' project.id  %}" method="post" class="form-group form-row">
+        {% csrf_token %}
+        <input type="hidden" name="project_id" value="{{ project.id }}">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?');">Delete</button>
+    </form>
+    </div>
 {% endblock %}
 
 {% block list_panel %}

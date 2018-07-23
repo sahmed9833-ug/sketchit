@@ -79,6 +79,28 @@ def new_drawing(request, project_id, new):
         render(request, 'draw/login.html')
 
 
+def delete_project(request, project_id, delete_project):
+    project = Project.objects.get(pk=project_id)
+    project.delete()
+    context = {
+        "form": ProjectForm(request.POST or None),
+        "projects": Project.objects.filter(user=request.user)
+    }
+    return render(request, 'draw/index.html', context)
+
+
+def delete_drawing(request, project_id, drawing_id, delete):
+    drawing = Drawing.objects.get(pk=drawing_id)
+    project = Project.objects.get(pk=project_id)
+    drawings = Drawing.objects.filter(project=project)
+    drawing.delete()
+    context = {
+        "project": project,
+        "drawings": drawings
+    }
+    return render(request, 'draw/project-detail.html', context)
+
+
 def logout(request):
     django_logout(request)
     form = UserForm(request.POST or None)
