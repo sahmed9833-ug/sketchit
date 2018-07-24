@@ -124,6 +124,7 @@
         function addRectangle(){
             drawingRect = !drawingRect;
             drawingCircle = false;
+            document.getElementById("drawCirc").className = "btn btn-light";
 
             if (drawingRect){
                 document.getElementById("drawRect").className += " btn-dark";
@@ -136,26 +137,32 @@
         function addCircle(){
             drawingCircle = !drawingCircle;
             drawingRect = false;
+            document.getElementById("drawRect").className = "btn btn-light";
 
             if (drawingCircle){
                 document.getElementById("drawCirc").className += " btn-dark";
             }
             else{
-                document.getElementById("drawCirc").className = "btn";
+                document.getElementById("drawCirc").className = "btn btn-light";
             }
         }
-
+        //  TODO: Probably a good idea to put all disabling operations into a single method.
         function setDrawingMode() {
             canvas.isDrawingMode = !canvas.isDrawingMode;
 
             if (canvas.isDrawingMode){
                 document.getElementById("freeDraw").className += " btn-dark";
+                drawingRect = false;
+                drawingCircle = false;
+                document.getElementById("drawCirc").className = "btn btn-light";
+                document.getElementById("drawRect").className = "btn btn-light";
             }
             else{
                 document.getElementById("freeDraw").className = "btn btn-light";
             }
         }
 
+        //  TODO: Fix this method, or the way it's called to keep grid from being selectable.
         function setInteractive(){
             if (canvasInteractive){
                 canvas.forEachObject(function(object){
@@ -254,6 +261,7 @@
                 rect.setCoords();
             else if (drawingCircle)
                 circ.setCoords();
+
         });
 
 
