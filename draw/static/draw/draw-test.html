@@ -1,82 +1,62 @@
-{% extends 'draw/base.html' %}
-{% block title %}{% if drawing %}{{ drawing }}{% else %}New Drawing{% endif %}{% endblock %}
-{% block drawing_link %}
-    {% if drawing %}
-        <li class="nav-item active"><a class="nav-link" href="{% url 'draw:drawing_detail' 1 drawing.id  %}"><i class="fas fa-image"></i>&nbsp; {{ drawing }}</a></li>
-    {% endif %}
-{% endblock %}
-{% block new_drawing_active %}
-    {% if not drawing %}
-    active
-    {% endif %}
-{% endblock %}
-{% block scripts %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw Test</title>
+
+    <link rel="shortcut icon" href="http://icons.iconarchive.com/icons/custom-icon-design/pretty-office-10/512/Pencil-icon.png">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css?family=Poppins|Shadows+Into+Light" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
+</head>
+<body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.22/fabric.min.js"></script>
-{% endblock %}
+    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand website-logo" href="#">Sketch-It-Yourself. </a>
+        <!-- Nav bar toggle and logo -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <!-- Nav bar list items -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- left side -->
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-project-diagram" aria-hidden="true"></i>&nbsp; Projects <span class="sr-only">(current)</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-images"></i>&nbsp; Drawings</a></li>
 
-{% block detail_panel %}
-    {% if not drawing %}<h3 style="text-align: center">New Drawing</h3>{% endif %}
-    <form action="" method="post" enctype="multipart/form-data" style="padding: 10px">
-    {% csrf_token %}
-        <div class="form-row">
-            <div class="col-auto">
-                {{ form.title }}
-            </div>
-            <div class="col-auto">
-                {{ form.project }}
-            </div>
-        </div><br>
-        <div class="form-row">
-            <div class="col">
-                {{ form.description }}
-            </div>
-        </div><br>
-        <div class="form-row">
-            <div class="col-auto">
-                <label for="">{{ form.is_pinned.label_tag }}</label>
-            </div>
-            <div class="col-auto">
-                {{ form.is_pinned }}
-            </div>
-        </div><br>
-        <div class="form-row">
-            {{ form.json_string }}
-        </div><br>
-        <div class="form-row">
-            <button type="button" class="btn btn-primary" onclick="saveJSON()" href="#">Save Drawing</button>&nbsp;
-            <button type="button" class="btn btn-primary" onclick="loadJSON()" href="#">Load Drawing</button>&nbsp;
-        </div><br>
-        <div class="form-row">
-            <button type="submit" class="btn btn-primary">Submit</button>
+                <li class="nav-item active" style="border-left: #1b1e21 solid 1px; padding-left: 5px; margin-left: 5px"><a class="nav-link" href=""><i class="fas fa-plus"></i>&nbsp; New Drawing</a></li>
+            </ul>
+            <!-- right side -->
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-user-plus"></i>&nbsp; Register</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-sign-in-alt"></i>&nbsp; Log In</a></li>
+            </ul>
         </div>
-    </form>
-    {% if drawing %}
-    <div class="col-auto">
-    <form action="{% url 'draw:delete_drawing' drawing.project.id drawing.id 'delete' %}" method="post" class="form-group form-row">
-        {% csrf_token %}
-        <input type="hidden" name="drawing_id" value="{{ drawing.id }}">
-        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?');">Delete</button>
-    </form>
-    </div>
-    {% endif %}
-{% endblock %}
+    </nav>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 detail-panel">
+            <h2>This is a static page intended for testing the web-app's drawing component.</h2>
+            <p>Other components (such as nav links) are non-functioning in this build.</p>
+            </div>
+            <div id="list-panel" class="col-md-9 list-panel">
+        <div class="row">
+            <div class="col-4">
+                <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
+                <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
+                <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
+                <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
+                <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
+            </div>
+            <div class="col-2">
 
-{% block list_panel %}
-    <div class="row">
-        <div class="col-4">
-            <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
-            <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
-            <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
-            <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
-            <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
+            </div>
+            <div class="col-2">
+                <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
+            </div>
         </div>
-        <div class="col-2">
-
-        </div>
-        <div class="col-2">
-            <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
-        </div>
-    </div>
     <br>
     <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
     <script>
@@ -88,24 +68,10 @@
         var drawingCircle = false;
         var canvasInteractive = true;
         var rect, circ, isDown, origX, origY;
-        var drawing_serial;
         var grid = 20;
-        loadJSON();
         renderGrid();
         setInteractive();
         canvas.renderAll();
-
-        function saveJSON(){
-            drawing_serial = JSON.stringify(canvas);
-
-            document.getElementById('id_json_string').value= drawing_serial;
-        }
-
-        function loadJSON(){
-
-            canvas.loadFromJSON({{ drawing.json_string | safe }});
-            renderGrid();
-        }
 
         //  create grid
         //  TODO: Consider putting up a background image rather than doing this - allows for group selection
@@ -289,4 +255,19 @@
 
         });
     </script>
-{% endblock %}
+                <br>
+            </div>
+        </div>
+        <div class="row">
+            <div class="container-fluid site-footer">
+                <span class="sig">Sketch-It-Yourself</span>
+                <p style="color: #c1c1c1; font-size: 15px; font-family: 'Times New Roman', Serif;">Completed as part of the MSc Computing Science programme at the University of Glasgow &copy; 2018</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>
