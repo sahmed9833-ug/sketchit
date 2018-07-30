@@ -2,6 +2,7 @@
 {% block title %}{% if drawing %}{{ drawing }}{% else %}New Drawing{% endif %}{% endblock %}
 {% block drawing_link %}
     {% if drawing %}
+        <!--suppress ALL -->
         <li class="nav-item active"><a class="nav-link" href="{% url 'draw:drawing_detail' 1 drawing.id  %}"><i class="fas fa-image"></i>&nbsp; {{ drawing }}</a></li>
     {% endif %}
 {% endblock %}
@@ -80,23 +81,24 @@
     <br>
     <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
     <script>
-        //  TODO: Strongly consider putting all of this into its own js file.
 
         //  initialise canvas and variables for drawing shapes
         var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa'});
         var drawingRect = false;
         var drawingCircle = false;
         var canvasInteractive = true;
-        var rect, circ, isDown, origX, origY;
+        var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
         var drawing_serial;
         var grid = 20;
+        var scale = 0.25;
         loadJSON();
         renderGrid();
         setInteractive();
         canvas.renderAll();
 
         function saveJSON(){
-            drawing_serial = JSON.stringify(canvas);
+            //  Need to pass our custom 'id' property to ensure it's loaded
+            drawing_serial = JSON.stringify(canvas.toJSON(['id']));
 
             document.getElementById('id_json_string').value= drawing_serial;
         }
@@ -104,16 +106,17 @@
         function loadJSON(){
 
             canvas.loadFromJSON({{ drawing.json_string | safe }});
+            //canvas.loadFromJSON(drawing_serial);
             renderGrid();
+            //console.log(rect.id);
         }
 
         //  create grid
-        //  TODO: Consider putting up a background image rather than doing this - allows for group selection
         function renderGrid(){
             console.log("Rendering grid");
             for (var i = 0; i < (800 / grid); i++) {
-                var lineH = new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true });
-                var lineV = new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true });
+                var lineH = new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
+                var lineV = new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
                 canvas.add(lineH);
                 canvas.add(lineV);
                 canvas.sendToBack(lineH);
@@ -139,9 +142,12 @@
             }
             else{
                 canvas.forEachObject(function(object){
-                    object.selectable = true
+                    if (object.id != 'grid'){
+                        object.selectable = true
+                    }
+
                 });
-                canvas.selection = false;
+                //canvas.selection = false;
                 canvasInteractive = true;
                 //disableDrawing();
                 //disableRect();
@@ -196,7 +202,19 @@
         }
 
         function deleteSelected(){
-            canvas.remove(canvas.getActiveObject());
+            var activeObject = canvas.getActiveObject(),
+                activeGroup = canvas.getActiveGroup();
+
+            if (activeObject){
+                canvas.remove(activeObject);
+            }
+            else if (activeGroup){
+                var groupObjects = activeGroup.getObjects();
+                canvas.discardActiveGroup();
+                groupObjects.forEach(function (object) {
+                    canvas.remove(object);
+                });
+            }
             canvas.renderAll();
         }
 
@@ -216,15 +234,16 @@
 
             if (drawingRect){
                 rect = new fabric.Rect({
-                left: origX,
-                top: origY,
-                originX: 'left',
-                originY: 'top',
-                width: pointer.x-origX,
-                height: pointer.y-origY,
-                angle: 0,
-                fill: 'rgba(0,0,0,0)',
-                stroke: 'black'
+                    left: origX,
+                    top: origY,
+                    originX: 'left',
+                    originY: 'top',
+                    width: pointer.x-origX,
+                    height: pointer.y-origY,
+                    angle: 0,
+                    fill: 'rgba(0,0,0,0)',
+                    stroke: 'black',
+                    id: '1'
                 });
                 canvas.add(rect);
             }
@@ -236,9 +255,18 @@
                     originY: 'top',
                     radius: (pointer.x-origX)/2,
                     fill: 'rgba(0,0,0,0)',
-                    stroke: 'black'
+                    stroke: 'black',
+                    id: '2'
                 });
                 canvas.add(circ);
+            }
+            if (canvasInteractive){
+                if (canvas.getActiveObject() != null){
+                    canvas.getActiveObject().on('moving', updateDimPosition);
+                    canvas.getActiveObject().on('rotating', updateDimPosition);
+                    canvas.getActiveObject().on('scaling', updateDimPosition);
+                    bindElems();
+                }
             }
         });
 
@@ -279,14 +307,79 @@
         //  what do when mouse button is lifted
         canvas.on('mouse:up', function(o){
             isDown = false;
-            if(drawingRect)
-                rect.setCoords();
-            else if (drawingCircle)
-                circ.setCoords();
+            var hopefullyUniqueId = Math.random().toString(16).slice(2);
+            if(drawingRect){
+                rect.set({ id: hopefullyUniqueId });
+                if (rect.width != 0 && rect.height != 0){
+                    dimXLeft = new fabric.Text('←', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id});
+                    dimX = new fabric.Textbox(' ' + rect.width*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.width - dimXLeft.width*2, id: rect.id, textAlign: 'center' });
+                    dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id });
 
+                    dimYTop = new fabric.Text('↑', { left: rect.left - 50, top: rect.top, fontSize: 29, id: rect.id});
+                    dimY = new fabric.Textbox(' ' + rect.height*scale + ' ', { left: rect.left - 75, top: rect.top + 70, height: rect.height - dimYTop.height*2, fontSize: 29, id: rect.id, textAlign: 'center' });
+                    dimYBottom = new fabric.Text('↓', { left: rect.left - 50, top: rect.top + rect.height - dimYTop.height, fontSize: 29, id: rect.id });
+                    rect.setCoords();
+
+                    canvas.add(dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom);
+                }
+            }
+            else if (drawingCircle){
+                circ.set({ id: hopefullyUniqueId });
+                if (circ.radius != 0){
+                    dimXLeft = new fabric.Text('←', { left: circ.left, top: circ.top - 50, fontSize: 29, id: circ.id});
+                    dimX = new fabric.Textbox(' ' + (circ.radius*2)*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, id: circ.id, textAlign: 'center' });
+                    dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: circ.top - 50, fontSize: 29, id: circ.id });
+
+                    circ.setCoords();
+                    canvas.add(dimXLeft, dimX, dimXRight);
+                }
+            }
             setInteractive();
             setInteractive();
-
         });
+
+        //  Figure out where to put this shit
+        var multiply = fabric.util.multiplyTransformMatrices;
+        var invert = fabric.util.invertTransform;
+
+        function updateDimPosition() {
+        var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
+        dims.forEach(o => {
+            if (!o.relationship) {
+            return;
+            }
+            var relationship = o.relationship;
+            var newTransform = multiply(
+            canvas.getActiveObject().calcTransformMatrix(),
+            relationship
+            );
+            opt = fabric.util.qrDecompose(newTransform);
+            o.set({
+            flipX: false,
+            flipY: false,
+            });
+            o.setPositionByOrigin(
+            { x: opt.translateX, y: opt.translateY },
+            'center',
+            'center'
+            );
+            o.set(opt);
+            o.setCoords();
+        });
+        }
+        //
+        function bindElems() {
+        var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
+        var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
+        var invertedshapeTransform = invert(shapeTransform);
+        dims.forEach(o => {
+            var desiredTransform = multiply(
+            invertedshapeTransform,
+            o.calcTransformMatrix()
+            );
+            // save the desired relation here.
+            o.relationship = desiredTransform;
+        });
+        }
     </script>
 {% endblock %}
