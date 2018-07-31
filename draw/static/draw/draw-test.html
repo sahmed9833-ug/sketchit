@@ -39,8 +39,8 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-3 detail-panel">
-            <h2>This is a static page intended for testing the web-app's drawing component.</h2>
-            <p>Other components (such as nav links) are non-functioning in this build.</p>
+            <h2>This HTML page is intended for testing of the web-app's drawing component</h2>
+            <p>Other components (such as nav links, save/load etc.) are non-functioning in this build.</p>
             </div>
             <div id="list-panel" class="col-md-9 list-panel">
         <div class="row">
@@ -48,11 +48,17 @@
                 <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
                 <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
                 <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
+                <button id="drawLine" type="button" class="btn btn-light disabled" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
                 <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
                 <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
             </div>
             <div class="col-2">
-
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="">Scale</span>
+                    </div>
+                    <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25">
+                </div>
             </div>
             <div class="col-2">
                 <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
@@ -61,7 +67,12 @@
     <br>
     <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
     <script>
-        //  TODO: Strongly consider putting all of this into its own js file.
+
+        //  override library's controls appearance
+        fabric.Object.prototype.set({
+            borderColor: 'green',
+            cornerSize: 16,
+            cornerColor: 'blue'});
 
         //  initialise canvas and variables for drawing shapes
         var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa'});
@@ -130,6 +141,23 @@
             document.getElementById("freeDraw").className += " btn-dark";
         }
 
+        function deleteSelected(){
+            var activeObject = canvas.getActiveObject(),
+                activeGroup = canvas.getActiveGroup();
+
+            if (activeObject){
+                canvas.remove(activeObject);
+            }
+            else if (activeGroup){
+                var groupObjects = activeGroup.getObjects();
+                canvas.discardActiveGroup();
+                groupObjects.forEach(function (object) {
+                    canvas.remove(object);
+                });
+            }
+            canvas.renderAll();
+        }
+
         function addRectangle(){
             drawingRect = true;
             disableInteract();
@@ -146,6 +174,17 @@
             disableRect();
 
             document.getElementById("drawCirc").className += " btn-dark";
+        }
+
+        function updateScale(){
+            scale = document.getElementById('scaleInput').value;
+        }
+
+        function clearCanvas(){
+
+            canvas.clear();
+            canvas.setBackgroundColor('#f8f9fa');
+            renderGrid();
         }
 
         //  toggle off methods
@@ -166,29 +205,24 @@
             document.getElementById("drawCirc").className = "btn btn-light";
         }
 
-        function deleteSelected(){
-            var activeObject = canvas.getActiveObject(),
-                activeGroup = canvas.getActiveGroup();
+        //  what to do when text (namely measurements) are altered
+        //  TODO: Fix this method so that measurements auto-adjust to shape's new size
+        canvas.on('text:editing:exited', function(o){
+            //canvas.getActiveObject().set({ backgroundColor: 'blue' });
+            var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'shape');
+            assocShape.forEach(o => {
 
-            if (activeObject){
-                canvas.remove(activeObject);
-            }
-            else if (activeGroup){
-                var groupObjects = activeGroup.getObjects();
-                canvas.discardActiveGroup();
-                groupObjects.forEach(function (object) {
-                    canvas.remove(object);
-                });
-            }
-            canvas.renderAll();
-        }
-
-        function clearCanvas(){
-
-            canvas.clear();
-            canvas.setBackgroundColor('#f8f9fa');
-            renderGrid();
-        }
+                if (canvas.getActiveObject().category == 'dimX'){
+                    o.set({ width: canvas.getActiveObject().text/scale });
+                }
+                if (canvas.getActiveObject().category == 'dimY'){
+                    o.set({ height: canvas.getActiveObject().text/scale });
+                }
+                if (canvas.getActiveObject().category == 'dimCirc'){
+                    o.set({ radius: (canvas.getActiveObject().text/2)/scale });
+                }
+            });
+        });
 
         //  what to do when mouse button is down
         canvas.on('mouse:down', function(o){
@@ -208,6 +242,7 @@
                     angle: 0,
                     fill: 'rgba(0,0,0,0)',
                     stroke: 'black',
+                    category: 'shape',
                     id: '1'
                 });
                 canvas.add(rect);
@@ -221,22 +256,24 @@
                     radius: (pointer.x-origX)/2,
                     fill: 'rgba(0,0,0,0)',
                     stroke: 'black',
+                    category: 'shape',
                     id: '2'
                 });
                 canvas.add(circ);
             }
             if (canvasInteractive){
                 if (canvas.getActiveObject() != null){
-                    canvas.getActiveObject().on('moving', updateDimPosition);
-                    canvas.getActiveObject().on('rotating', updateDimPosition);
-                    canvas.getActiveObject().on('scaling', updateDimPosition);
-                    bindElems();
+                    canvas.getActiveObject().on('moving', updateDimensions);
+                    canvas.getActiveObject().on('rotating', updateDimensions);
+                    canvas.getActiveObject().on('scaling', updateDimensions);
+                    bindDimensions();
                 }
             }
         });
 
-        //  what to do when the mouse moves, will not do anything if mouse is not down
+        //  what to do when the mouse moves
         canvas.on('mouse:move', function(o){
+            // do not do anything if mouse is not down
             if (!isDown) return;
             var pointer = canvas.getPointer(o.e);
             if (drawingRect){
@@ -277,11 +314,11 @@
                 rect.set({ id: hopefullyUniqueId });
                 if (rect.width != 0 && rect.height != 0){
                     dimXLeft = new fabric.Text('←', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id});
-                    dimX = new fabric.Textbox(' ' + rect.width*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.width - dimXLeft.width*2, id: rect.id, textAlign: 'center' });
+                    dimX = new fabric.Textbox(' ' + (rect.width*scale).toFixed(2) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.width - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX' });
                     dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id });
 
                     dimYTop = new fabric.Text('↑', { left: rect.left - 50, top: rect.top, fontSize: 29, id: rect.id});
-                    dimY = new fabric.Textbox(' ' + rect.height*scale + ' ', { left: rect.left - 75, top: rect.top + 70, height: rect.height - dimYTop.height*2, fontSize: 29, id: rect.id, textAlign: 'center' });
+                    dimY = new fabric.Textbox(' ' + (rect.height*scale).toFixed(2) + ' ', { left: rect.left - 75, top: rect.top + 70, height: rect.height - dimYTop.height*2, fontSize: 29, textAlign: 'center', id: rect.id, category: 'dimY' });
                     dimYBottom = new fabric.Text('↓', { left: rect.left - 50, top: rect.top + rect.height - dimYTop.height, fontSize: 29, id: rect.id });
                     rect.setCoords();
 
@@ -292,7 +329,7 @@
                 circ.set({ id: hopefullyUniqueId });
                 if (circ.radius != 0){
                     dimXLeft = new fabric.Text('←', { left: circ.left, top: circ.top - 50, fontSize: 29, id: circ.id});
-                    dimX = new fabric.Textbox(' ' + (circ.radius*2)*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, id: circ.id, textAlign: 'center' });
+                    dimX = new fabric.Textbox(' ' + ((circ.radius*2)*scale).toFixed(2) + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, textAlign: 'center', id: circ.id, category: 'dimCirc' });
                     dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: circ.top - 50, fontSize: 29, id: circ.id });
 
                     circ.setCoords();
@@ -306,44 +343,53 @@
         var multiply = fabric.util.multiplyTransformMatrices;
         var invert = fabric.util.invertTransform;
 
-        function updateDimPosition() {
-        var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
-        dims.forEach(o => {
-            if (!o.relationship) {
-            return;
-            }
-            var relationship = o.relationship;
-            var newTransform = multiply(
-            canvas.getActiveObject().calcTransformMatrix(),
-            relationship
-            );
-            opt = fabric.util.qrDecompose(newTransform);
-            o.set({
-            flipX: false,
-            flipY: false,
+        function updateDimensions() {
+
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
+            dims.forEach(o => {
+                if (!o.relationship) {
+                    return;
+                }
+                var relationship = o.relationship;
+                var newTransform = multiply(canvas.getActiveObject().calcTransformMatrix(), relationship);
+                opt = fabric.util.qrDecompose(newTransform);
+                o.set({
+                flipX: false,
+                flipY: false,
+                });
+                o.setPositionByOrigin(
+                { x: opt.translateX, y: opt.translateY },
+                'center',
+                'center'
+                );
+
+                if (o.category === 'dimX'){
+                    o.set({ text: ' ' + (canvas.getActiveObject().getWidth()*scale).toFixed(2) + ' ' }) ;
+                }
+                if (o.category === 'dimY'){
+                    o.set({ text: ' ' + (canvas.getActiveObject().getHeight()*scale).toFixed(2) + ' ' });
+                }
+                if (o.category === 'dimCirc'){
+                    o.set({ text: ' ' + ((canvas.getActiveObject().getRadiusX()*2)*scale).toFixed(2) + ' ' });
+                }
+
+                o.set(opt);
+                o.setCoords();
             });
-            o.setPositionByOrigin(
-            { x: opt.translateX, y: opt.translateY },
-            'center',
-            'center'
-            );
-            o.set(opt);
-            o.setCoords();
-        });
         }
-        //
-        function bindElems() {
-        var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
-        var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
-        var invertedshapeTransform = invert(shapeTransform);
-        dims.forEach(o => {
-            var desiredTransform = multiply(
-            invertedshapeTransform,
-            o.calcTransformMatrix()
-            );
-            // save the desired relation here.
-            o.relationship = desiredTransform;
-        });
+
+        function bindDimensions() {
+            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
+            var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
+            var invertedshapeTransform = invert(shapeTransform);
+            dims.forEach(o => {
+                var desiredTransform = multiply(
+                invertedshapeTransform,
+                o.calcTransformMatrix()
+                );
+                // save the desired relation here.
+                o.relationship = desiredTransform;
+            });
         }
     </script>
                 <br>

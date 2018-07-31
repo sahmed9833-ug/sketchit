@@ -68,6 +68,7 @@
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
+            <button id="drawLine" type="button" class="btn btn-light disabled" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
             <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
         </div>
@@ -76,17 +77,22 @@
                 <div class="input-group-prepend">
                     <span class="input-group-text" id="">Scale</span>
                 </div>
-                <input id="scaleInput" type="text" class="form-control" placeholder="0.25">
+                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25">
             </div>
         </div>
         <div class="col-2">
-
             <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
         </div>
     </div>
     <br>
     <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
     <script>
+
+        //  override library's controls appearance
+        fabric.Object.prototype.set({
+            borderColor: 'green',
+            cornerSize: 16,
+            cornerColor: 'blue'});
 
         //  initialise canvas and variables for drawing shapes
         var canvas = new fabric.Canvas('c',{backgroundColor : '#f8f9fa'});
@@ -171,6 +177,23 @@
             document.getElementById("freeDraw").className += " btn-dark";
         }
 
+        function deleteSelected(){
+            var activeObject = canvas.getActiveObject(),
+                activeGroup = canvas.getActiveGroup();
+
+            if (activeObject){
+                canvas.remove(activeObject);
+            }
+            else if (activeGroup){
+                var groupObjects = activeGroup.getObjects();
+                canvas.discardActiveGroup();
+                groupObjects.forEach(function (object) {
+                    canvas.remove(object);
+                });
+            }
+            canvas.renderAll();
+        }
+
         function addRectangle(){
             drawingRect = true;
             disableInteract();
@@ -187,6 +210,17 @@
             disableRect();
 
             document.getElementById("drawCirc").className += " btn-dark";
+        }
+
+        function updateScale(){
+            scale = document.getElementById('scaleInput').value;
+        }
+
+        function clearCanvas(){
+
+            canvas.clear();
+            canvas.setBackgroundColor('#f8f9fa');
+            renderGrid();
         }
 
         //  toggle off methods
@@ -207,29 +241,24 @@
             document.getElementById("drawCirc").className = "btn btn-light";
         }
 
-        function deleteSelected(){
-            var activeObject = canvas.getActiveObject(),
-                activeGroup = canvas.getActiveGroup();
+        //  what to do when text (namely measurements) are altered
+        //  TODO: Fix this method so that measurements auto-adjust to shape's new size
+        canvas.on('text:editing:exited', function(o){
+            //canvas.getActiveObject().set({ backgroundColor: 'blue' });
+            var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'shape');
+            assocShape.forEach(o => {
 
-            if (activeObject){
-                canvas.remove(activeObject);
-            }
-            else if (activeGroup){
-                var groupObjects = activeGroup.getObjects();
-                canvas.discardActiveGroup();
-                groupObjects.forEach(function (object) {
-                    canvas.remove(object);
-                });
-            }
-            canvas.renderAll();
-        }
-
-        function clearCanvas(){
-
-            canvas.clear();
-            canvas.setBackgroundColor('#f8f9fa');
-            renderGrid();
-        }
+                if (canvas.getActiveObject().category == 'dimX'){
+                    o.set({ width: canvas.getActiveObject().text/scale });
+                }
+                if (canvas.getActiveObject().category == 'dimY'){
+                    o.set({ height: canvas.getActiveObject().text/scale });
+                }
+                if (canvas.getActiveObject().category == 'dimCirc'){
+                    o.set({ radius: (canvas.getActiveObject().text/2)/scale });
+                }
+            });
+        });
 
         //  what to do when mouse button is down
         canvas.on('mouse:down', function(o){
@@ -249,6 +278,7 @@
                     angle: 0,
                     fill: 'rgba(0,0,0,0)',
                     stroke: 'black',
+                    category: 'shape',
                     id: '1'
                 });
                 canvas.add(rect);
@@ -262,6 +292,7 @@
                     radius: (pointer.x-origX)/2,
                     fill: 'rgba(0,0,0,0)',
                     stroke: 'black',
+                    category: 'shape',
                     id: '2'
                 });
                 canvas.add(circ);
