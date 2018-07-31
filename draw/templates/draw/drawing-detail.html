@@ -72,9 +72,15 @@
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
         </div>
         <div class="col-2">
-
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="">Scale</span>
+                </div>
+                <input id="scaleInput" type="text" class="form-control" placeholder="0.25">
+            </div>
         </div>
         <div class="col-2">
+
             <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
         </div>
     </div>
@@ -98,7 +104,7 @@
 
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            drawing_serial = JSON.stringify(canvas.toJSON(['id']));
+            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category']));
 
             document.getElementById('id_json_string').value= drawing_serial;
         }
@@ -262,16 +268,17 @@
             }
             if (canvasInteractive){
                 if (canvas.getActiveObject() != null){
-                    canvas.getActiveObject().on('moving', updateDimPosition);
-                    canvas.getActiveObject().on('rotating', updateDimPosition);
-                    canvas.getActiveObject().on('scaling', updateDimPosition);
-                    bindElems();
+                    canvas.getActiveObject().on('moving', updateDimensions);
+                    canvas.getActiveObject().on('rotating', updateDimensions);
+                    canvas.getActiveObject().on('scaling', updateDimensions);
+                    bindDimensions();
                 }
             }
         });
 
-        //  what to do when the mouse moves, will not do anything if mouse is not down
+        //  what to do when the mouse moves
         canvas.on('mouse:move', function(o){
+            // do not do anything if mouse is not down
             if (!isDown) return;
             var pointer = canvas.getPointer(o.e);
             if (drawingRect){
@@ -312,11 +319,11 @@
                 rect.set({ id: hopefullyUniqueId });
                 if (rect.width != 0 && rect.height != 0){
                     dimXLeft = new fabric.Text('←', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id});
-                    dimX = new fabric.Textbox(' ' + rect.width*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.width - dimXLeft.width*2, id: rect.id, textAlign: 'center' });
+                    dimX = new fabric.Textbox(' ' + (rect.width*scale).toFixed(2) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.width - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX' });
                     dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id });
 
                     dimYTop = new fabric.Text('↑', { left: rect.left - 50, top: rect.top, fontSize: 29, id: rect.id});
-                    dimY = new fabric.Textbox(' ' + rect.height*scale + ' ', { left: rect.left - 75, top: rect.top + 70, height: rect.height - dimYTop.height*2, fontSize: 29, id: rect.id, textAlign: 'center' });
+                    dimY = new fabric.Textbox(' ' + (rect.height*scale).toFixed(2) + ' ', { left: rect.left - 75, top: rect.top + 70, height: rect.height - dimYTop.height*2, fontSize: 29, textAlign: 'center', id: rect.id, category: 'dimY' });
                     dimYBottom = new fabric.Text('↓', { left: rect.left - 50, top: rect.top + rect.height - dimYTop.height, fontSize: 29, id: rect.id });
                     rect.setCoords();
 
@@ -327,7 +334,7 @@
                 circ.set({ id: hopefullyUniqueId });
                 if (circ.radius != 0){
                     dimXLeft = new fabric.Text('←', { left: circ.left, top: circ.top - 50, fontSize: 29, id: circ.id});
-                    dimX = new fabric.Textbox(' ' + (circ.radius*2)*scale + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, id: circ.id, textAlign: 'center' });
+                    dimX = new fabric.Textbox(' ' + ((circ.radius*2)*scale).toFixed(2) + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, textAlign: 'center', id: circ.id, category: 'dimCirc' });
                     dimXRight = new fabric.Text('→', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: circ.top - 50, fontSize: 29, id: circ.id });
 
                     circ.setCoords();
@@ -338,48 +345,56 @@
             setInteractive();
         });
 
-        //  Figure out where to put this shit
         var multiply = fabric.util.multiplyTransformMatrices;
         var invert = fabric.util.invertTransform;
 
-        function updateDimPosition() {
-        var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
-        dims.forEach(o => {
-            if (!o.relationship) {
-            return;
-            }
-            var relationship = o.relationship;
-            var newTransform = multiply(
-            canvas.getActiveObject().calcTransformMatrix(),
-            relationship
-            );
-            opt = fabric.util.qrDecompose(newTransform);
-            o.set({
-            flipX: false,
-            flipY: false,
+        function updateDimensions() {
+
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
+            dims.forEach(o => {
+                if (!o.relationship) {
+                    return;
+                }
+                var relationship = o.relationship;
+                var newTransform = multiply(canvas.getActiveObject().calcTransformMatrix(), relationship);
+                opt = fabric.util.qrDecompose(newTransform);
+                o.set({
+                flipX: false,
+                flipY: false,
+                });
+                o.setPositionByOrigin(
+                { x: opt.translateX, y: opt.translateY },
+                'center',
+                'center'
+                );
+
+                if (o.category === 'dimX'){
+                    o.set({ text: ' ' + (canvas.getActiveObject().getWidth()*scale).toFixed(2) + ' ' }) ;
+                }
+                if (o.category === 'dimY'){
+                    o.set({ text: ' ' + (canvas.getActiveObject().getHeight()*scale).toFixed(2) + ' ' });
+                }
+                if (o.category === 'dimCirc'){
+                    o.set({ text: ' ' + ((canvas.getActiveObject().getRadiusX()*2)*scale).toFixed(2) + ' ' });
+                }
+
+                o.set(opt);
+                o.setCoords();
             });
-            o.setPositionByOrigin(
-            { x: opt.translateX, y: opt.translateY },
-            'center',
-            'center'
-            );
-            o.set(opt);
-            o.setCoords();
-        });
         }
-        //
-        function bindElems() {
-        var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
-        var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
-        var invertedshapeTransform = invert(shapeTransform);
-        dims.forEach(o => {
-            var desiredTransform = multiply(
-            invertedshapeTransform,
-            o.calcTransformMatrix()
-            );
-            // save the desired relation here.
-            o.relationship = desiredTransform;
-        });
+
+        function bindDimensions() {
+            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
+            var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
+            var invertedshapeTransform = invert(shapeTransform);
+            dims.forEach(o => {
+                var desiredTransform = multiply(
+                invertedshapeTransform,
+                o.calcTransformMatrix()
+                );
+                // save the desired relation here.
+                o.relationship = desiredTransform;
+            });
         }
     </script>
 {% endblock %}
