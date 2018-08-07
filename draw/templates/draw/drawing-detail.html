@@ -64,7 +64,7 @@
 
 {% block list_panel %}
     <div class="row">
-        <div class="col-4">
+        <div class="col-3">
             <!-- TODO: Consider having a "Select" mode -->
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
@@ -76,17 +76,36 @@
         <div class="col-2">
             <div class="input-group">
                 <div class="input-group-prepend">
+
                     <span class="input-group-text" id="">Scale</span>
+                    <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()"><i class="fas fa-i-cursor"></i></button>&nbsp;
                 </div>
-                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="0.25">
+                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="0.25">&nbsp;
+
             </div>
+
+
         </div>
-        <div class="col-2">
+        <div class="col-4">
+            <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Move objects">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
+            <button id ="hideDimY" type="button" class="btn btn-light" onclick="hideDimY()" title="Move objects">Show/Hide <i class="fas fa-arrows-alt-v"></i></button>&nbsp;
             <button id ="deleteSelected" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas"><i class="fas fa-trash-alt"></i></button>
         </div>
     </div>
-    <br>
-    <canvas id="c" width="800" height="700" style="border: 1px solid black"></canvas>
+    <div class="row" style="margin-top: 5px">
+        <div class="col-2">
+
+        </div>
+        <div class="col-1">
+
+        </div>
+        <div class="col-6">
+
+        </div>
+    </div>
+        <canvas id="c" width="800" height="700" style="border: 1px solid black; margin-top: 5px"></canvas>
+
+
     <script>
 
         //  override library's controls appearance
@@ -95,8 +114,63 @@
             cornerSize: 16,
             cornerColor: 'blue'});
 
+        //  override how fabric renders stroke, from https://stackoverflow.com/a/48343346
+        fabric.Object.prototype._renderStroke = function (ctx) {
+            if (!this.stroke || this.strokeWidth === 0) {
+                return;
+            }
+            if (this.shadow && !this.shadow.affectStroke) {
+                this._removeShadow(ctx);
+            }
+            ctx.save();
+            // if (this.strokeUniform)
+            ctx.scale(1 / this.scaleX, 1 / this.scaleY);
+            this._setLineDash(ctx, this.strokeDashArray, this._renderDashedStroke);
+            this._applyPatternGradientTransform(ctx, this.stroke);
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        // const _getTransformedDimensions = fabric.Object.prototype._getTransformedDimensions;
+        fabric.Object.prototype._getTransformedDimensions = function (skewX, skewY) {
+            // if (!this.strokeUniform)
+            //     return _getTransformedDimensions.call(this, e, t);
+            if (typeof skewX === 'undefined') {
+                skewX = this.skewX;
+            }
+            if (typeof skewY === 'undefined') {
+                skewY = this.skewY;
+            }
+            const dimX = this.width / 2,
+                dimY = this.height / 2;
+
+            let points = [{
+                x: -dimX,
+                y: -dimY
+            }, {
+                x: dimX,
+                y: -dimY
+            }, {
+                x: -dimX,
+                y: dimY
+            }, {
+                x: dimX,
+                y: dimY
+            }];
+            const transformMatrix = this._calcDimensionsTransformMatrix(skewX, skewY, false);
+            for (let i = 0; i < points.length; i++) {
+                points[i] = fabric.util.transformPoint(points[i], transformMatrix);
+            }
+            const bbox = fabric.util.makeBoundingBoxFromPoints(points);
+            return {
+                y: bbox.height + this.strokeWidth,
+                x: bbox.width + this.strokeWidth,
+            };
+        };
+
         //  initialise canvas and variables for drawing shapes
         var canvas = new fabric.Canvas('c',{ backgroundColor : '#f8f9fa', hoverCursor: 'pointer'});
+
         var drawingRect = false;
 
         var drawingCircle = false;
@@ -112,6 +186,7 @@
         var text;
 
         var canvasInteractive = true;
+        var scalingMode = true;
         var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
         var drawing_serial;
         var arrowWidth = 34.2;
@@ -125,7 +200,7 @@
 
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow']));
+            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden']));
 
             document.getElementById('id_json_string').value= drawing_serial;
         }
@@ -151,6 +226,18 @@
             }
         }
 
+        function setScalingMode(){
+            if (scalingMode){
+                scalingMode = false;
+                document.getElementById("setScaling").className = "btn btn-light";
+
+            }
+            else{
+                scalingMode = true;
+                document.getElementById("setScaling").className += " btn-dark";
+            }
+        }
+
         function setInteractMode(){
             disableDrawing();
             disableRect();
@@ -170,7 +257,7 @@
             }
             else{
                 canvas.forEachObject(function(object){
-                    if (object.id != 'grid'){
+                    if (object.id != 'grid' && object.hidden != true){
                         object.selectable = true
                     }
 
@@ -274,25 +361,83 @@
             document.getElementById("drawLine").className = "btn btn-light";
         }
 
+        function hideDimX(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'dimX');
+
+            dims.forEach(o => {
+                if (o.opacity == 0){
+                    o.set({ opacity: 100, selectable: true, hidden: false });
+                }
+                else{
+                    o.set({ opacity: 0, selectable: false, hidden: true });
+                }
+
+            });
+        }
+
+        function hideDimY(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'dimY');
+
+            dims.forEach(o => {
+                if (o.opacity == 0){
+                    o.set({ opacity: 100, selectable: true, hidden: false });
+                }
+                else{
+                    o.set({ opacity: 0, selectable: false, hidden: true });
+                }
+
+            });
+        }
+
 
 
         //  what to do when text (namely measurements) are altered
-        //  TODO: Fix this method so that measurements auto-adjust to shape's new size
+        //  TODO: Implement suggestions here - https://github.com/fabricjs/fabric.js/issues/1119
         canvas.on('text:editing:exited', function(o){
             //canvas.getActiveObject().set({ backgroundColor: 'blue' });
-            var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'shape');
+            if(scalingMode){
+                var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
 
-            if (canvas.getActiveObject().category == 'dimX'){
-                    assocShape[0].set({ width: Math.round(canvas.getActiveObject().text/scale) });
+                if(canvas.getActiveObject().category === 'dimX'){
+                    console.log("You set the scale to:" + canvas.getActiveObject().text/assocShape[0].width);
+                    scale = canvas.getActiveObject().text/assocShape[0].width;
                 }
-                if (canvas.getActiveObject().category == 'dimY'){
-                    assocShape[0].set({ height: Math.round(canvas.getActiveObject().text/scale) });
+                else if(canvas.getActiveObject().category === 'dimY'){
+                    console.log("You editied a y-dimension");
+                    scale = canvas.getActiveObject().text/assocShape[0].height;
                 }
-                if (canvas.getActiveObject().category == 'dimCirc'){
-                    assocShape[0].set({ radius: Math.round((canvas.getActiveObject().text/2)/scale) });
+                else if(canvas.getActiveObject().category === 'dimCirc'){
+                    scale = (canvas.getActiveObject().text/2)/assocShape[0].radius;
                 }
-            canvas.setActiveObject(assocShape[0]);
-            scaleDimensions('text');
+
+                document.getElementById("scaleInput").value = scale;
+
+                canvas.setActiveObject(assocShape[0]);
+                scaleDimensions();
+            }
+            else{/*
+                var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'shape');
+                assocShape[0].set({ strokeWidth: constStrokeWidth });
+                console.log("What you typed: " + canvas.getActiveObject().text);
+                console.log("What's input: " + Math.round(canvas.getActiveObject().text/scale));
+                console.log("What ought to be input: " + Math.round(Number(canvas.getActiveObject().text) + assocShape[0].getStrokeWidth() / scale));
+
+                if (canvas.getActiveObject().category == 'dimX'){
+                        assocShape[0].set({ width: Math.round((canvas.getActiveObject().text + assocShape[0].getStrokeWidth())/scale) });
+                        console.log("Actual width: " + (assocShape[0].getWidth() - assocShape[0].getStrokeWidth()));
+                        console.log("Width now: " + Math.round(assocShape[0].getWidth()*scale));
+                    }
+                    if (canvas.getActiveObject().category == 'dimY'){
+                        assocShape[0].set({ height: Math.round(canvas.getActiveObject().text/scale) });
+                    }
+                    if (canvas.getActiveObject().category == 'dimCirc'){
+                        assocShape[0].set({ radius: Math.round((canvas.getActiveObject().text/2)/scale) });
+                    }
+                //canvas.setActiveObject(assocShape[0]);
+                //scaleDimensions('text');*/
+            }
+
+
         });
 
         //  what to do when mouse button is down
@@ -377,8 +522,14 @@
                 rect.set({ width: Math.abs(origX - pointer.x) });
                 rect.set({ height: Math.abs(origY - pointer.y) });
 
+                endx[temp] = pointer.x;
+                endy[temp] = pointer.y;
 
-                canvas.renderAll();
+                text = new fabric.Text('Width: ' + Math.round(rect.getWidth()*scale) + '\nHeight: ' + Math.round(rect.getHeight()*scale), { left: endx[temp], top: endy[temp], fontSize: 25 });
+
+                //canvas.add(text);
+
+                //canvas.renderAll();
             }
             if (drawingCircle){
                 if(origX>pointer.x){
@@ -391,7 +542,7 @@
                 circ.set({ radius: Math.abs((origX - pointer.x)/2) });
 
 
-                canvas.renderAll();
+                //canvas.renderAll();
             }
             if (drawingLine){
                 line.set({ x2: pointer.x, y2: pointer.y });
@@ -400,7 +551,6 @@
                 endy[temp] = pointer.y;
 
                 var dist = Calculate.lineLength(startx[temp], starty[temp], endx[temp], endy[temp]).toFixed(2);
-                console.log("x1: " + startx[temp] + " y1: " + starty[temp] + " x2: " + endx[temp] + " y2: " + endy[temp]);
                 text = new fabric.Text('Length: ' + dist, { left: endx[temp], top: endy[temp], fontSize: 25 });
 
                 canvas.add(text);
@@ -416,19 +566,18 @@
                 rect.set({ id: hopefullyUniqueId });
                 if (rect.width != 0 && rect.height != 0){
 
-                    rect.setCoords();
                     console.log('Initial width: ' + Math.round(rect.getWidth()*scale));
 
-                    dimXLeft = new fabric.Text('⟵', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'left', category: 'dimX'});
-                    dimX = new fabric.Textbox(' ' + Math.round((rect.getWidth() - constStrokeWidth)*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.getWidth() - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX' });
-                    dimXRight = new fabric.Text('⟶', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'right', category: 'dimX' });
+                    dimXLeft = new fabric.Text('⟵', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'left', category: 'dimX', hidden: false});
+                    dimX = new fabric.Textbox(' ' + Math.round((rect.getWidth() - constStrokeWidth)*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.getWidth() - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX', hidden: false  });
+                    dimXRight = new fabric.Text('⟶', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'right', category: 'dimX', hidden: false  });
 
-                    dimYTop = new fabric.Text('⟶', { left: rect.left - 50, top: rect.top + 30, fontSize: 29, angle: 270, id: rect.id, arrow: 'left', category: 'dimY' });
-                    dimY = new fabric.Textbox(' ' + Math.round((rect.getHeight() - constStrokeWidth)*scale) + ' ', { left: rect.left - 50, width: rect.getHeight() - dimYTop.height*2, fontSize: 29, angle: 270, textAlign: 'center', id: rect.id, category: 'dimY' });
+                    dimYTop = new fabric.Text('⟶', { left: rect.left - 50, top: rect.top + 30, fontSize: 29, angle: 270, id: rect.id, arrow: 'left', category: 'dimY', hidden: false  });
+                    dimY = new fabric.Textbox(' ' + Math.round((rect.getHeight() - constStrokeWidth)*scale) + ' ', { left: rect.left - 50, width: rect.getHeight() - dimYTop.height*2, fontSize: 29, angle: 270, textAlign: 'center', id: rect.id, category: 'dimY', hidden: false  });
                     dimY.set({ top: rect.top + dimY.width + 30});
-                    dimYBottom = new fabric.Text('⟵', { left: rect.left - 50, top: rect.top + dimY.width + dimYTop.width*2, fontSize: 29, angle: 270, id: rect.id, arrow: 'right', category: 'dimY'});
+                    dimYBottom = new fabric.Text('⟵', { left: rect.left - 50, top: rect.top + dimY.width + dimYTop.width*2, fontSize: 29, angle: 270, id: rect.id, arrow: 'right', category: 'dimY', hidden: false });
 
-
+                    rect.setCoords();
 
                     //  TODO: Insert code block(s) to adjust font-size of dimensions if rect a certain size
 
@@ -438,13 +587,16 @@
             else if (drawingCircle){
                 circ.set({ id: hopefullyUniqueId });
                 if (circ.radius != 0){
-                    dimXLeft = new fabric.Text('⟵', { left: circ.left, top: circ.top - 50, fontSize: 29, id: circ.id, arrow: 'left', category: 'dimCirc', arrow: 'left'});
-                    dimX = new fabric.Textbox(' ' + Math.round((circ.getRadiusX()*2)*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, textAlign: 'center', id: circ.id, category: 'dimCirc' });
-                    dimXRight = new fabric.Text('⟶', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: circ.top - 50, fontSize: 29, id: circ.id, category: 'dimCirc', arrow: 'right' });
+                    dimXLeft = new fabric.Text('⟵', { left: circ.left, top: circ.top - 50, fontSize: 29, id: circ.id, arrow: 'left', category: 'dimCirc', arrow: 'left', hidden: false });
+                    dimX = new fabric.Textbox(' ' + Math.round((circ.getRadiusX()*2)*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: circ.top - 50, fontSize: 29, width: circ.radius*2 - dimXLeft.width*2, textAlign: 'center', id: circ.id, category: 'dimCirc', hidden: false  });
+                    dimXRight = new fabric.Text('⟶', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: circ.top - 50, fontSize: 29, id: circ.id, category: 'dimCirc', arrow: 'right', hidden: false  });
 
                     circ.setCoords();
                     canvas.add(dimXLeft, dimX, dimXRight);
                 }
+            }
+            else if(drawingLine){
+                line.set({ id: hopefullyUniqueId });
             }
             setInteractive();
             setInteractive();
@@ -521,7 +673,7 @@
                             console.log("input via text");
                         }
                         else{
-                            //o.set({ text: ' ' + Math.round((canvas.getActiveObject().getWidth() - constStrokeWidth) * scale)  + ' '});
+                            o.set({ text: ' ' + Math.round((canvas.getActiveObject().getWidth() - constStrokeWidth) * scale)  + ' '});
                         }
 
 
@@ -558,6 +710,7 @@
                     if (o.isType('textbox')){
                         o.set({ width: Math.round(canvas.getActiveObject().getRadiusX()*2) - arrowWidth*2 });
                         valCirc = o.getWidth();
+                        console.log("Circ Dim width: " + valCirc);
                         o.set({ left: canvas.getActiveObject().left + arrowWidth });
                         o.set({ top: canvas.getActiveObject().top - 50 });
                         o.set({ text: ' ' + Math.round((canvas.getActiveObject().getRadiusX()*2)*scale) + ' '});
@@ -567,12 +720,11 @@
                         o.set({ top: canvas.getActiveObject().top - 50 });
                     }
                     if (o.arrow === 'right'){
-                        o.set({ left: canvas.getActiveObject().top + o.getWidth() + arrowWidth*2 });
+                        o.set({ left: canvas.getActiveObject().left + valCirc + arrowWidth });
                         o.set({ top: canvas.getActiveObject().top - 50 });
                     }
                 }
             });
-
             canvas.getActiveObject().setCoords();
         }
 
