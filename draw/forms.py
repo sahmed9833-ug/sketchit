@@ -32,6 +32,7 @@ class DrawingForm(forms.ModelForm):
     description = forms.CharField(widget=forms.TextInput(attrs={'placeholder': "Description", 'class': "form-control"}))
     is_pinned = forms.BooleanField(widget=forms.CheckboxInput, required=False)
     json_string = forms.CharField(widget=forms.Textarea(attrs={'class': "form-control"}))
+    scale = forms.CharField(widget=forms.TextInput(attrs={'class': "form-control"}))
 
     class Meta:
         model = Drawing

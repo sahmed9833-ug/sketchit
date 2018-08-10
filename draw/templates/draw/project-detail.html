@@ -4,7 +4,6 @@
 
 {% block detail_panel %}
     <h2 style="text-align: center">{{ project }}</h2>
-<!-- TODO: Add more info here, such as whether or not it's shared and with whom. -->
     <div class="col-auto">
     <form action="{% url 'draw:delete_project' 'delete_project' project.id  %}" method="post" class="form-group form-row">
         {% csrf_token %}

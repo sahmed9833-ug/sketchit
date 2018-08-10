@@ -27,6 +27,7 @@ class Drawing(models.Model):
     last_modified = models.DateField(auto_now=True)
     is_pinned = models.BooleanField(default=False)
     json_string = models.TextField(default='JSON goes here')
+    scale = models.TextField(default='0.25')
 
     def __str__(self):
         return self.title

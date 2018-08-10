@@ -44,6 +44,9 @@
             {{ form.json_string }}
         </div><br>
         <div class="form-row">
+            {{ form.scale }}
+        </div><br>
+        <div class="form-row">
             <button type="button" class="btn btn-primary" onclick="saveJSON()" href="#">Save Drawing</button>&nbsp;
             <button type="button" class="btn btn-primary" onclick="loadJSON()" href="#">Load Drawing</button>&nbsp;
         </div><br>
@@ -80,7 +83,7 @@
                     <span class="input-group-text" id="">Scale</span>
                     <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()"><i class="fas fa-i-cursor"></i></button>&nbsp;
                 </div>
-                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="0.25">&nbsp;
+                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="{% if drawing %}{{ drawing.scale }}{% else %}0.25{% endif %}">&nbsp;
 
             </div>
 
@@ -104,6 +107,7 @@
         </div>
     </div>
         <canvas id="c" width="800" height="700" style="border: 1px solid black; margin-top: 5px"></canvas>
+
 
 
     <script>
@@ -168,6 +172,16 @@
             };
         };
 
+
+        //  modify Textbox slightly to exit editing when the Enter key is pressed
+        fabric.Textbox.prototype.onKeyDown = (function(onKeyDown) {
+            return function(e) {
+            if (e.keyCode == 13)
+                canvas.getActiveObject().exitEditing();
+            onKeyDown.call(this, e);
+          }
+        })(fabric.Textbox.prototype.onKeyDown)
+
         //  initialise canvas and variables for drawing shapes
         var canvas = new fabric.Canvas('c',{ backgroundColor : '#f8f9fa', hoverCursor: 'pointer'});
 
@@ -192,7 +206,11 @@
         var arrowWidth = 34.2;
         var constStrokeWidth = 2;
         var grid = 20;
-        var scale = 0.25;
+        {% if drawing %}
+            var scale = {{ drawing.scale }};
+        {% else %}
+            var scale = 0.25;
+        {% endif %}
         loadJSON();
         renderGrid();
         setInteractive();
@@ -201,16 +219,21 @@
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
             drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden']));
-
+            document.getElementById('id_scale').value = scale;
             document.getElementById('id_json_string').value= drawing_serial;
         }
 
         function loadJSON(){
 
             canvas.loadFromJSON({{ drawing.json_string | safe }});
-            //canvas.loadFromJSON(drawing_serial);
             renderGrid();
-            //console.log(rect.id);
+            //  iterate through shape objects, performing scaleDimensions() on them to ensure dimensions are to scale
+            canvas.forEachObject(function (object) {
+                if (object.category === 'shape'){
+                    canvas.setActiveObject(object);
+                    scaleDimensions();
+                }
+            });
         }
 
         //  create grid
@@ -362,7 +385,7 @@
         }
 
         function hideDimX(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'dimX' || o.category == 'dimCirc');
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc');
 
             dims.forEach(o => {
                 if (o.opacity == 0){
@@ -559,17 +582,16 @@
 
                     console.log('Initial width: ' + Math.round(rect.getWidth()*scale));
 
-                    dimXLeft = new fabric.Text('⟵', { left: rect.left, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'left', category: 'dimX', hidden: false});
-                    dimX = new fabric.Textbox(' ' + Math.round((rect.getWidth() - constStrokeWidth)*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.getWidth() - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX', hidden: false  });
+                    dimXLeft = new fabric.Text('⟵', { left: rect.left, top: rect.top - 50, arrow: 'left', id: rect.id, category: 'dimX'});
+                    dimX = new fabric.Textbox(' ' + Math.round(rect.getWidth()*scale) + ' ', { left: dimXLeft.left + dimXLeft.width, top: rect.top - 50, fontSize: 29, width: rect.getWidth() - dimXLeft.width*2, textAlign: 'center', id: rect.id, category: 'dimX', hidden: false  });
                     dimXRight = new fabric.Text('⟶', { left: dimXLeft.left + dimX.width + dimXLeft.width, top: rect.top - 50, fontSize: 29, id: rect.id, arrow: 'right', category: 'dimX', hidden: false  });
 
                     dimYTop = new fabric.Text('⟶', { left: rect.left - 50, top: rect.top + 35, fontSize: 29, angle: 270, id: rect.id, arrow: 'left', category: 'dimY', hidden: false  });
-                    dimY = new fabric.Textbox(' ' + Math.round((rect.getHeight() - constStrokeWidth)*scale) + ' ', { left: rect.left - 50, width: rect.getHeight() - dimYTop.height*2, fontSize: 29, angle: 270, textAlign: 'center', id: rect.id, category: 'dimY', hidden: false  });
+                    dimY = new fabric.Textbox(' ' + Math.round(rect.getHeight()*scale) + ' ', { left: rect.left - 50, width: rect.getHeight() - dimYTop.height*2, fontSize: 29, angle: 270, textAlign: 'center', id: rect.id, category: 'dimY', hidden: false  });
                     dimY.set({ top: rect.top + dimY.width + 30});
                     dimYBottom = new fabric.Text('⟵', { left: rect.left - 50, top: rect.top + dimY.width + dimYTop.width*2 - 2, fontSize: 29, angle: 270, id: rect.id, arrow: 'right', category: 'dimY', hidden: false });
 
                     rect.setCoords();
-
                     //  TODO: Insert code block(s) to adjust font-size of dimensions if rect a certain size
 
                     canvas.add(dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom);
@@ -589,9 +611,33 @@
             else if(drawingLine){
                 line.set({ id: hopefullyUniqueId });
             }
+
+            //  Apply common properties to dimension objects
+            if (drawingRect  || drawingCircle || drawingLine){
+                var dims = [dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom];
+                if (!drawingRect){
+                    dims = [dimXLeft, dimX, dimXRight]
+                }
+                dims.forEach(function (dimObject) {
+                    //  Disable scaling/rotation controls
+                    dimObject.setControlsVisibility({ bl: false, br: false, tl: false, tr: false, mt: false, mb: false, mr: false, ml: false, mtr: false });
+
+                    //  Set common properties
+                    dimObject.set({ hidden: false });
+
+                });
+            }
+
+            //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
+            if (canvas.getActiveObject() && canvas.getActiveObject().isType('textbox')){
+                canvas.getActiveObject().enterEditing();
+                canvas.getActiveObject().selectAll();
+            }
+
             setInteractive();
             setInteractive();
         });
+
 
         //  http://jsfiddle.net/ydtt94zm/2/
         var Calculate={
@@ -606,8 +652,6 @@
         function updateDimensions() {
 
             var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
-            canvas.getActiveObject().set({ strokeWidth: constStrokeWidth });
-            console.log("Stroke: " + canvas.getActiveObject().strokeWidth);
 
 
             dims.forEach(o => {
@@ -628,10 +672,10 @@
                 );
                 if (canvas.getActiveObject() === 'shape'){
                     if (o.category === 'dimX' && o.isType('textbox')){
-                    o.set({ text: ' ' + Math.round((canvas.getActiveObject().getWidth() - constStrokeWidth)*scale) + ' ' }) ;
+                    o.set({ text: ' ' + Math.round((canvas.getActiveObject().getWidth())*scale) + ' ' }) ;
                     }
                     if (o.category === 'dimY' && o.isType('textbox')){
-                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getHeight() - constStrokeWidth)*scale) + ' ' });
+                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getHeight())*scale) + ' ' });
                     }
                     if (o.category === 'dimCirc' && o.isType('textbox')){
                         o.set({ text: ' ' + Math.round((canvas.getActiveObject().getRadiusX()*2)*scale) + ' ' });
@@ -647,11 +691,6 @@
         function scaleDimensions(){
             var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
             var valWidth, valHeight, valCirc;
-
-            canvas.getActiveObject().set({ strokeWidth: constStrokeWidth });
-
-            console.log("Stroke: " + canvas.getActiveObject().strokeWidth);
-            console.log("width: " + canvas.getActiveObject().getWidth()*scale);
 
             dims.forEach(o => {
                 if (o.category === 'dimX'){
