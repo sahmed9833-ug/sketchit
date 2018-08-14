@@ -395,6 +395,7 @@
         canvas.on('text:editing:exited', function(o){
             //get the edited measurement's associated shape
             var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
+            var shapes = canvas.getObjects().filter(o => o.category === 'shape');
 
             if(scalingMode){
                 if(canvas.getActiveObject().category === 'dimX'){
@@ -409,8 +410,11 @@
                     scale = (canvas.getActiveObject().text/2)/assocShape[0].getRadiusX();
                 }
                 document.getElementById("scaleInput").value = scale;
-                canvas.setActiveObject(assocShape[0]);
-                scaleDimensions();
+
+                shapes.forEach( o => {
+                    canvas.setActiveObject(o);
+                    scaleDimensions();
+                });
             }
             else{
                 if (canvas.getActiveObject().category == 'dimX'){
