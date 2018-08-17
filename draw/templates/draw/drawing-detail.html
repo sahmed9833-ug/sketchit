@@ -204,7 +204,7 @@
 
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside']));
+            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng']));
             document.getElementById('id_scale').value = scale;
             document.getElementById('id_json_string').value= drawing_serial;
         }
@@ -372,7 +372,7 @@
         }
 
         function hideDimX(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc');
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
 
             dims.forEach(o => {
                 if (o.opacity == 0){
@@ -400,7 +400,7 @@
         }
 
         function repositionDimX(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc');
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
 
             dims.forEach(o => {
                 o.set({ positionOutside: !o.positionOutside });
@@ -412,11 +412,29 @@
                         o.set({ top: canvas.getActiveObject().top - 50 });
                     }
                 }
+                else if (o.category === 'dimLine'){
+                    if (!o.positionOutside){
+                        o.set({ top: canvas.getActiveObject().top + 20 });
+                    }
+                    else{
+                        o.set({ top: canvas.getActiveObject().top - 50 });
+                    }
+                }
                 else if (!o.positionOutside){
-                    o.set({ top: canvas.getActiveObject().top + 25 });
+                    if (o.fontSize == 29){
+                        o.set({ top: canvas.getActiveObject().top + 25 });
+                    }
+                    else{
+                        o.set({ top: canvas.getActiveObject().top + 5 });
+                    }
                 }
                 else{
-                    o.set({ top: canvas.getActiveObject().top - 50 });
+                    if (o.fontSize == 29){
+                        o.set({ top: canvas.getActiveObject().top - 50 });
+                    }
+                    else{
+                        o.set({ top: canvas.getActiveObject().top - 30 });
+                    }
                 }
             });
             canvas.renderAll();
@@ -429,10 +447,20 @@
                 o.set({ positionOutside: !o.positionOutside});
 
                 if (!o.positionOutside){
-                    o.set({ left: canvas.getActiveObject().left + 25 });
+                    if (o.fontSize == 29){
+                        o.set({ left: canvas.getActiveObject().left + 25 });
+                    }
+                    else{
+                        o.set({ left: canvas.getActiveObject().left + 5 });
+                    }
                 }
                 else{
-                    o.set({ left: canvas.getActiveObject().left - 50});
+                    if (o.fontSize == 29){
+                        o.set({ left: canvas.getActiveObject().left - 50});
+                    }
+                    else{
+                        o.set({ left: canvas.getActiveObject().left - 30});
+                    }
                 }
             });
             canvas.renderAll();
@@ -446,15 +474,16 @@
 
             if(scalingMode){
                 if(canvas.getActiveObject().category === 'dimX'){
-                    console.log("You set the scale to:" + canvas.getActiveObject().text/assocShape[0].width);
                     scale = canvas.getActiveObject().text/assocShape[0].getWidth();
                 }
                 else if(canvas.getActiveObject().category === 'dimY'){
-                    console.log("You editied a y-dimension");
                     scale = canvas.getActiveObject().text/assocShape[0].getHeight();
                 }
                 else if(canvas.getActiveObject().category === 'dimCirc'){
                     scale = (canvas.getActiveObject().text/2)/assocShape[0].getRadiusX();
+                }
+                else if(canvas.getActiveObject().category === 'dimLine'){
+                    scale = canvas.getActiveObject().text/assocShape[0].lineLen;
                 }
                 document.getElementById("scaleInput").value = scale;
                 shapes.forEach( o => {
@@ -474,6 +503,22 @@
                 if (canvas.getActiveObject().category == 'dimCirc'){
                     var radDif = canvas.getActiveObject().text/2 - assocShape[0].getRadiusX()*scale;
                     assocShape[0].setRadius(assocShape[0].radius + (radDif/scale) / assocShape[0].scaleX);
+                }
+                if (canvas.getActiveObject().category == 'dimLine'){
+                    var desiredLen = canvas.getActiveObject().text;
+
+                    while(Math.round(assocShape[0].lineLen*scale) != desiredLen){
+                        console.log("Iteration..")
+                        var lenMultiplyer = desiredLen / (assocShape[0].lineLen*scale);
+
+                        assocShape[0].setWidth((assocShape[0].width*lenMultiplyer) / assocShape[0].scaleX);
+                        assocShape[0].setHeight((assocShape[0].height*lenMultiplyer) / assocShape[0].scaleY);
+
+                        assocShape[0].set({ lineLen: Math.sqrt(Math.pow(assocShape[0].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
+                        //canvas.setActiveObject(assocShape[0]);
+                        //scaleDimensions();
+                    }
+
                 }
 
                 canvas.setActiveObject(assocShape[0]);
@@ -530,7 +575,9 @@
                     originX: 'center',
                     originY: 'center',
                     stroke: 'black',
-                    strokeWidth: 2
+                    strokeWidth: 2,
+                    category: 'shape',
+                    hasControls: false
                 });
                 canvas.add(line);
             }
@@ -592,11 +639,12 @@
                 endy[temp] = pointer.y;
 
                 var dist = Calculate.lineLength(startx[temp], starty[temp], endx[temp], endy[temp]).toFixed(2);
+                line.set({ lineLen: dist });
                 text = new fabric.Text('Length: ' + dist, { left: endx[temp], top: endy[temp], fontSize: 25 });
 
-                canvas.add(text);
+                //canvas.add(text);
             }
-            canvas.renderAll();
+            //canvas.renderAll();
         });
 
         //  what do when mouse button is lifted
@@ -638,23 +686,45 @@
             else if(drawingLine){
                 currentShape = line;
                 line.set({ id: hopefullyUniqueId });
-                var angleIThink = Math.atan2(endy[temp] - starty[temp], endx[temp] - startx[temp]);
-                angleIThink *= 180 / Math.PI;
-                console.log("Angle: " + angleIThink);
+
+                var lineAngle = Math.atan2(endy[temp] - starty[temp], endx[temp] - startx[temp]);
+                lineAngle *= 180 / Math.PI;
+                line.set({ lineAng: lineAngle });
+
+                var lineLen = Math.sqrt(Math.pow(line.getHeight(), 2) + Math.pow(line.getWidth(), 2));
+                line.set({ lineLen: lineLen });
+
+                //dimXLeft = new fabric.Text('⟵', { id: line.id, arrow: 'left', category: 'dimLine', arrow: 'left', hidden: false });
+                dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
+                //dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false  });
+
+                canvas.add(dimX);
+
+                console.log("X1: " + line.x1);
+                console.log("left: " + line.left);
+
+                console.log("Y1: " + line.y1);
+                console.log("top: " + line.top);
+
+                console.log("X2: " + line.x2);
+                console.log("Y2: " + line.y2);
+                console.log("Width: " + line.width);
+                console.log("Height: " + line.height);
+
             }
 
             //  Apply common properties to dimension objects
-            if (drawingRect  || drawingCircle){
+            if (drawingRect  || drawingCircle || drawingLine){
                 var dims = [dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom];
                 if (!drawingRect){
                     dims = [dimXLeft, dimX, dimXRight]
                 }
+                if (drawingLine){
+                    dims = [dimX];
+                }
                 dims.forEach(function (dimObject) {
-                    //  Disable scaling/rotation controls
-                    dimObject.setControlsVisibility({ bl: false, br: false, tl: false, tr: false, mt: false, mb: false, mr: false, ml: false, mtr: false });
-
                     //  Set common properties
-                    dimObject.set({ fontSize: 29, hidden: false, positionOutside: true });
+                    dimObject.set({ fontSize: 29, hidden: false, positionOutside: true, hasControls: false });
 
                 });
 
@@ -663,7 +733,7 @@
             }
 
             //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
-            if (canvas.getActiveObject() && canvas.getActiveObject().isType('textbox')){
+            if (canvas.getActiveObject() && canvas.getActiveObject().isType('textbox') ){
                 canvas.getActiveObject().enterEditing();
                 canvas.getActiveObject().selectAll();
             }
@@ -680,13 +750,12 @@
 			}
 		}
 
+        // code from documentation: http://fabricjs.com/using-transformations
         var multiply = fabric.util.multiplyTransformMatrices;
         var invert = fabric.util.invertTransform;
-
         function updateDimensions() {
 
             var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
-
 
             dims.forEach(o => {
                 if (!o.relationship) {
@@ -704,17 +773,6 @@
                 'center',
                 'center'
                 );
-                if (canvas.getActiveObject() === 'shape'){
-                    if (o.category === 'dimX' && o.isType('textbox')){
-                    o.set({ text: ' ' + Math.round((canvas.getActiveObject().getWidth())*scale) + ' ' }) ;
-                    }
-                    if (o.category === 'dimY' && o.isType('textbox')){
-                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getHeight())*scale) + ' ' });
-                    }
-                    if (o.category === 'dimCirc' && o.isType('textbox')){
-                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getRadiusX()*2)*scale) + ' ' });
-                    }
-                }
 
 
                 o.set(opt);
@@ -749,13 +807,10 @@
                     }
                     if (o.arrow === 'left'){
                         o.set({ left: canvas.getActiveObject().left});
-                        console.log("Arrow width: " + o.getWidth());
                     }
                     if (o.arrow === 'right'){
                         o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
                     }
-
-
 
                     if (o.positionOutside){
                         if (o.fontSize == 29){
@@ -850,6 +905,43 @@
                     }
                     else{
                         o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
+                    }
+                }
+                if (o.category === 'dimLine'){
+                    /*
+                    line.x1 = line.left - 119.50
+                    line.y1 = line.top - 105
+
+                    line.x2 = line.x1 + width
+                    line.y2 = line.y1 + height
+                     */
+                    if (canvas.getActiveObject().getHeight() < 20){
+                        console.log("So smol!");
+                    }
+
+
+                    optFontSize = 29;
+                    xArrowWidth = xArrowWidth = 34.2;
+
+                    if (o.isType('textbox')){
+                        var newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2))
+                        canvas.getActiveObject().set({ lineLen: newLen });
+                        console.log("Line length: " + newLen*scale);
+
+                        //o.set({ left: (canvas.getActiveObject().x2 + canvas.getActiveObject().x1)/2 });
+                        //o.set({ top: (canvas.getActiveObject().y2 + canvas.getActiveObject().y1)/2 - 50 });
+
+                        o.set({ left: canvas.getActiveObject().left - 50 });
+                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
+
+                        if (o.positionOutside){
+                            o.set({ top: canvas.getActiveObject().top - 50 });
+                        }
+                        else{
+                            o.set({ top: canvas.getActiveObject().top + 20 });
+                        }
+
+
                     }
                 }
             });
