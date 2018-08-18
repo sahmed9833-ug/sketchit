@@ -45,7 +45,6 @@
             <div id="list-panel" class="col-md-9 list-panel">
         <div class="row">
         <div class="col-3">
-            <!-- TODO: Consider having a "Select" mode -->
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
@@ -169,7 +168,8 @@
         var arrowWidth = 34.2;
         var constStrokeWidth = 2;
         var grid = 20;
-            var scale = 0.25;
+        var scale = 0.25;
+        //loadJSON();
         renderGrid();
         setInteractive();
         canvas.renderAll();
@@ -254,6 +254,10 @@
                 var groupObjects = activeGroup.getObjects();
                 canvas.discardActiveGroup();
                 groupObjects.forEach(function (object) {
+                    var dims = canvas.getObjects().filter(o => o.id === object.id);
+                    dims.forEach(o => {
+                        canvas.remove(o);
+                    });
                     canvas.remove(object);
                 });
             }
@@ -467,8 +471,6 @@
                         assocShape[0].setHeight((assocShape[0].height*lenMultiplyer) / assocShape[0].scaleY);
 
                         assocShape[0].set({ lineLen: Math.sqrt(Math.pow(assocShape[0].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
-                        //canvas.setActiveObject(assocShape[0]);
-                        //scaleDimensions();
                     }
 
                 }
@@ -580,9 +582,6 @@
                 }
 
                 circ.set({ radius: Math.abs((origX - pointer.x)/2) });
-
-
-                //canvas.renderAll();
             }
             if (drawingLine){
                 line.set({ x2: pointer.x, y2: pointer.y });
@@ -590,17 +589,18 @@
                 endx[temp] = pointer.x;
                 endy[temp] = pointer.y;
 
+                //  TODO: Decide on whether or not to keep this.
                 var dist = Calculate.lineLength(startx[temp], starty[temp], endx[temp], endy[temp]).toFixed(2);
                 line.set({ lineLen: dist });
-                text = new fabric.Text('Length: ' + dist, { left: endx[temp], top: endy[temp], fontSize: 25 });
+                text = new fabric.Text('Length: ' + dist*scale, { left: endx[temp], top: endy[temp], fontSize: 25 });
 
                 //canvas.add(text);
             }
-            //canvas.renderAll();
         });
 
         //  what do when mouse button is lifted
         canvas.on('mouse:up', function(o){
+            canvas.remove(text);
             isDown = false;
             var hopefullyUniqueId = Math.random().toString(16).slice(2);
             var currentShape;
@@ -608,6 +608,7 @@
                 currentShape = rect;
                 rect.set({ id: hopefullyUniqueId });
                 rect.setControlsVisibility({ mtr: false });
+
                 if (rect.width != 0 && rect.height != 0){
 
                     dimXLeft = new fabric.Text('⟵', { arrow: 'left', id: rect.id, category: 'dimX' });
@@ -620,6 +621,7 @@
 
                     rect.setCoords();
                     canvas.add(dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom);
+
                 }
             }
             else if (drawingCircle){
@@ -646,9 +648,8 @@
                 var lineLen = Math.sqrt(Math.pow(line.getHeight(), 2) + Math.pow(line.getWidth(), 2));
                 line.set({ lineLen: lineLen });
 
-                //dimXLeft = new fabric.Text('⟵', { id: line.id, arrow: 'left', category: 'dimLine', arrow: 'left', hidden: false });
+                //  arrows ommitted, however if they were to be added they would follow same pattern as other X-dimensions
                 dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
-                //dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false  });
 
                 canvas.add(dimX);
 
@@ -681,7 +682,8 @@
                 });
 
                 canvas.setActiveObject(currentShape);
-                scaleDimensions()
+                scaleDimensions();
+                setInteractMode();
             }
 
             //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
@@ -692,6 +694,7 @@
 
             setInteractive();
             setInteractive();
+
         });
 
 
@@ -706,8 +709,7 @@
         var multiply = fabric.util.multiplyTransformMatrices;
         var invert = fabric.util.invertTransform;
         function updateDimensions() {
-
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && !canvas.getActiveObject().isType('path'));
 
             dims.forEach(o => {
                 if (!o.relationship) {
@@ -860,19 +862,12 @@
                     }
                 }
                 if (o.category === 'dimLine'){
-                    /*
-                    line.x1 = line.left - 119.50
-                    line.y1 = line.top - 105
-
-                    line.x2 = line.x1 + width
-                    line.y2 = line.y1 + height
-                     */
-                    if (canvas.getActiveObject().getHeight() < 20){
-                        console.log("So smol!");
+                    if (canvas.getActiveObject().lineLen < 106){
+                        optFontSize = 15;
                     }
-
-
-                    optFontSize = 29;
+                    else{
+                        optFontSize = 29;
+                    }
                     xArrowWidth = xArrowWidth = 34.2;
 
                     if (o.isType('textbox')){
@@ -880,11 +875,10 @@
                         canvas.getActiveObject().set({ lineLen: newLen });
                         console.log("Line length: " + newLen*scale);
 
-                        //o.set({ left: (canvas.getActiveObject().x2 + canvas.getActiveObject().x1)/2 });
-                        //o.set({ top: (canvas.getActiveObject().y2 + canvas.getActiveObject().y1)/2 - 50 });
-
                         o.set({ left: canvas.getActiveObject().left - 50 });
+                        o.set({ fontSize: optFontSize });
                         o.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
+
 
                         if (o.positionOutside){
                             o.set({ top: canvas.getActiveObject().top - 50 });
