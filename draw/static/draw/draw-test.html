@@ -62,6 +62,8 @@
                 </div>
                 <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="0.25">&nbsp;
             </div>
+            <button id ="zoomIn" type="button" class="btn btn-light" onclick="zoomIn()" title="Zoom in" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-plus"></i></button>&nbsp;
+            <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;
         </div>
         <div class="col-2">
             <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Show or Hide selected shape's X dimension">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
@@ -185,6 +187,7 @@
                 canvas.sendToBack(lineH);
                 canvas.sendToBack(lineV);
             }
+            canvas.renderAll();
         }
 
         function setScalingMode(){
@@ -196,6 +199,57 @@
                 scalingMode = true;
                 document.getElementById("setScaling").className += " btn-dark";
             }
+        }
+
+        function zoom(){
+
+            var assocShape = canvas.getObjects().filter(o => o.category === 'shape');
+
+            for(i = 0; i < assocShape.length; i++){
+                console.log("A shape!");
+                var dims = canvas.getObjects().filter(o => o.category !== 'shape' && o.id == assocShape[i].id);
+
+                dims.forEach( o => {
+                    console.log("A dim!");
+                    if (o.isType('textbox')){
+
+                        if (o.category === 'dimLine'){
+                            var desiredLen = o.text;
+                            var lenMultiplyer = desiredLen / (assocShape[i].lineLen*scale);
+                            var orgWidth = assocShape[i].width;
+                            assocShape[i].setWidth((assocShape[i].width*lenMultiplyer) / assocShape[i].scaleX);
+                            assocShape[i].setHeight((assocShape[i].height*lenMultiplyer) / assocShape[i].scaleY);
+
+                            assocShape[i].set({ lineLen: Math.sqrt(Math.pow(assocShape[i].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
+                            assocShape[i].set({ left: assocShape[i].left });
+                            console.log("Left now: " + assocShape[i].left);
+                        }
+                        else{
+                            canvas.setActiveObject(o);
+                            transformDrawing(assocShape, i);
+                        }
+
+                    }
+                });
+                canvas.setActiveObject(assocShape[i]);
+                scaleDimensions();
+            }
+        }
+
+        function zoomIn(){
+            //canvas.setZoom(canvas.getZoom() * 1.1);
+            //var dims = canvas.getObjects().filter(o => o.category !== 'shape' && o.id !== 'grid');
+
+            scale = scale/1.09;
+            zoom();
+
+        }
+
+        function zoomOut(){
+            //canvas.getActiveObject().setZoom(canvas.getZoom() / 1.1);
+
+            scale = scale*1.09;
+            zoom();
         }
 
         function setInteractMode(){
@@ -295,7 +349,19 @@
         }
 
         function updateScale(){
+            /*
+                At 0.25 each square is 5
+
+             */
+
+            var shapes = canvas.getObjects().filter(o => o.category === 'shape');
             scale = document.getElementById('scaleInput').value;
+
+            document.getElementById("scaleInput").value = scale;
+                shapes.forEach( o => {
+                    canvas.setActiveObject(o);
+                    scaleDimensions();
+            });
         }
 
         function clearCanvas(){
@@ -360,6 +426,7 @@
 
             dims.forEach(o => {
                 o.set({ positionOutside: !o.positionOutside });
+
                 if (o.category === 'dimCirc'){
                     if (!o.positionOutside){
                         o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
@@ -370,10 +437,10 @@
                 }
                 else if (o.category === 'dimLine'){
                     if (!o.positionOutside){
-                        o.set({ top: canvas.getActiveObject().top + 20 });
+                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/1.5 });
                     }
                     else{
-                        o.set({ top: canvas.getActiveObject().top - 50 });
+                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/2 });
                     }
                 }
                 else if (!o.positionOutside){
@@ -422,6 +489,239 @@
             canvas.renderAll();
         }
 
+        function transformDrawing(assocShape, i){
+
+            if (canvas.getActiveObject().category == 'dimX'){
+                var widthDif = canvas.getActiveObject().text - assocShape[i].getWidth()*scale;
+                assocShape[i].setWidth(assocShape[i].width + ((widthDif/scale) / assocShape[i].scaleX));
+            }
+            if (canvas.getActiveObject().category == 'dimY'){
+                var heightDif = canvas.getActiveObject().text - assocShape[i].getHeight()*scale;
+                assocShape[i].setHeight(assocShape[i].height + (heightDif/scale) / assocShape[i].scaleY);
+            }
+            if (canvas.getActiveObject().category == 'dimCirc'){
+                var radDif = canvas.getActiveObject().text/2 - assocShape[i].getRadiusX()*scale;
+                assocShape[i].setRadius(assocShape[i].radius + (radDif/scale) / assocShape[i].scaleX);
+            }
+            if (canvas.getActiveObject().category == 'dimLine'){
+                var desiredLen = canvas.getActiveObject().text;
+
+                while(Math.round(assocShape[i].lineLen*scale) != desiredLen){
+                    var lenMultiplyer = desiredLen / (assocShape[i].lineLen*scale);
+                    assocShape[i].setWidth((assocShape[i].width*lenMultiplyer) / assocShape[i].scaleX);
+                    assocShape[i].setHeight((assocShape[i].height*lenMultiplyer) / assocShape[i].scaleY);
+
+                    assocShape[i].set({ lineLen: Math.sqrt(Math.pow(assocShape[i].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
+                }
+            }
+            canvas.setActiveObject(assocShape[i]);
+
+        }
+
+        // code from documentation: http://fabricjs.com/using-transformations
+        var multiply = fabric.util.multiplyTransformMatrices;
+        var invert = fabric.util.invertTransform;
+        function updateDimensions() {
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && !canvas.getActiveObject().isType('path'));
+
+            dims.forEach(o => {
+                if (!o.relationship) {
+                    return;
+                }
+                var relationship = o.relationship;
+                var newTransform = multiply(canvas.getActiveObject().calcTransformMatrix(), relationship);
+                opt = fabric.util.qrDecompose(newTransform);
+                o.set({
+                flipX: false,
+                flipY: false,
+                });
+                o.setPositionByOrigin(
+                { x: opt.translateX, y: opt.translateY },
+                'center',
+                'center'
+                );
+
+
+                o.set(opt);
+                o.setCoords();
+            });
+        }
+
+        function scaleDimensions(){
+            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
+            var valWidth, valHeight, valCirc;
+            var optFontSize;
+            var xArrowWidth;
+            var yArrowWidth;
+
+            dims.forEach(o => {
+                if (o.category === 'dimX'){
+                    if (canvas.getActiveObject().getWidth() < 106){
+                        optFontSize = 15;
+                        xArrowWidth = 18;
+                    }
+                    else{
+                        optFontSize = 29;
+                        xArrowWidth = 34.2;
+                    }
+                    o.set({ fontSize: optFontSize });
+
+                    if (o.isType('textbox')) {
+                        o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
+                        o.set({ left: canvas.getActiveObject().left + xArrowWidth});
+                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
+                        valWidth = o.getWidth();
+                    }
+                    if (o.arrow === 'left'){
+                        o.set({ left: canvas.getActiveObject().left});
+                    }
+                    if (o.arrow === 'right'){
+                        o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
+                    }
+
+                    if (o.positionOutside){
+                        if (o.fontSize == 29){
+                            o.set({ top: canvas.getActiveObject().top - 50});
+                        }
+                        else{
+                            o.set({ top: canvas.getActiveObject().top - 30});
+                        }
+                    }
+                    else{
+                        if (o.fontSize == 29){
+                            o.set({ top: canvas.getActiveObject().top + 25 });
+                        }
+                        else {
+                            o.set({top: canvas.getActiveObject().top + 5});
+                        }
+                    }
+                }
+                if (o.category === 'dimY'){
+                    if (canvas.getActiveObject().getHeight() < 106){
+                        optFontSize = 15;
+                        yArrowWidth = 18;
+                    }
+                    else{
+                        optFontSize = 29;
+                        yArrowWidth = 34.2
+                    }
+                    o.set({ fontSize: optFontSize });
+
+                    if (o.isType('textbox')){
+                        o.set({ width: Math.round(canvas.getActiveObject().getHeight()) - yArrowWidth*2});
+                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getHeight()*scale) + ' '})
+                        valHeight = o.getWidth();
+                        o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth});
+                    }
+                    if (o.arrow === 'left'){
+                        o.set({ top: canvas.getActiveObject().top + yArrowWidth});
+                    }
+                    if (o.arrow === 'right'){
+                        o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth*2 - 2});
+                    }
+
+                    if (o.positionOutside){
+                        if (o.fontSize == 29){
+                            o.set({ left: canvas.getActiveObject().left - 50});
+                        }
+                        else{
+                            o.set({ left: canvas.getActiveObject().left - 30});
+                        }
+                    }
+                    else{
+                        if (o.fontSize == 29){
+                            o.set({ left: canvas.getActiveObject().left + 25});
+                        }
+                        else{
+                            o.set({ left: canvas.getActiveObject().left + 5});
+                        }
+                    }
+                }
+                if (o.category === 'dimCirc'){
+                    if (canvas.getActiveObject().getRadiusX()*2 < 106){
+                        optFontSize = 15;
+                        xArrowWidth = 18;
+                    }
+                    else{
+                        optFontSize = 29;
+                        xArrowWidth = 34.2;
+                    }
+                    o.set({ fontSize: optFontSize });
+
+                    if (o.isType('textbox')){
+                        o.set({ width: Math.round(canvas.getActiveObject().getRadiusX()*2) - xArrowWidth*2 });
+
+                        valCirc = o.getWidth();
+                        o.set({ left: canvas.getActiveObject().left + xArrowWidth });
+                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getRadiusX()*2)*scale) + ' '});
+                    }
+                    if (o.arrow === 'left'){
+                        o.set({ left: canvas.getActiveObject().left });
+                    }
+                    if (o.arrow === 'right'){
+                        o.set({ left: canvas.getActiveObject().left + valCirc + xArrowWidth });
+                    }
+
+                    if (o.positionOutside){
+                        if (optFontSize == 29){
+                            o.set({ top: canvas.getActiveObject().top - 50 });
+                        }
+                        else{
+                            o.set({ top: canvas.getActiveObject().top - 30 });
+                        }
+                    }
+                    else{
+                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
+                    }
+                }
+                if (o.category === 'dimLine'){
+                    if (canvas.getActiveObject().lineLen < 106){
+                        optFontSize = 15;
+                    }
+                    else{
+                        optFontSize = 29;
+                    }
+                    xArrowWidth = xArrowWidth = 34.2;
+
+                    if (o.isType('textbox')){
+                        var newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2))
+                        canvas.getActiveObject().set({ lineLen: newLen });
+                        console.log("Line length: " + newLen*scale);
+
+                        o.set({ left: canvas.getActiveObject().left + canvas.getActiveObject().width/2 });
+                        o.set({ fontSize: optFontSize });
+                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
+
+
+                        if (o.positionOutside){
+                            o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/2 });
+                        }
+                        else{
+                            o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject()/1.5 });
+                        }
+
+
+                    }
+                }
+            });
+            canvas.getActiveObject().setCoords();
+            canvas.renderAll();
+        }
+
+        function bindDimensions() {
+            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
+            var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
+            var invertedshapeTransform = invert(shapeTransform);
+            dims.forEach(o => {
+                var desiredTransform = multiply(
+                invertedshapeTransform,
+                o.calcTransformMatrix()
+                );
+                // save the desired relation here.
+                o.relationship = desiredTransform;
+            });
+        }
+
         //  what to do when text (namely measurement values) are altered
         canvas.on('text:editing:exited', function(o){
             //get the edited measurement's associated shape
@@ -448,35 +748,8 @@
                 });
             }
             else{
-                if (canvas.getActiveObject().category == 'dimX'){
-                    var widthDif = canvas.getActiveObject().text - assocShape[0].getWidth()*scale;
-                    assocShape[0].setWidth(assocShape[0].width + ((widthDif/scale) / assocShape[0].scaleX));
-                }
-                if (canvas.getActiveObject().category == 'dimY'){
-                    var heightDif = canvas.getActiveObject().text - assocShape[0].getHeight()*scale;
-                    assocShape[0].setHeight(assocShape[0].height + (heightDif/scale) / assocShape[0].scaleY);
-                }
-                if (canvas.getActiveObject().category == 'dimCirc'){
-                    var radDif = canvas.getActiveObject().text/2 - assocShape[0].getRadiusX()*scale;
-                    assocShape[0].setRadius(assocShape[0].radius + (radDif/scale) / assocShape[0].scaleX);
-                }
-                if (canvas.getActiveObject().category == 'dimLine'){
-                    var desiredLen = canvas.getActiveObject().text;
-
-                    while(Math.round(assocShape[0].lineLen*scale) != desiredLen){
-                        console.log("Iteration..")
-                        var lenMultiplyer = desiredLen / (assocShape[0].lineLen*scale);
-
-                        assocShape[0].setWidth((assocShape[0].width*lenMultiplyer) / assocShape[0].scaleX);
-                        assocShape[0].setHeight((assocShape[0].height*lenMultiplyer) / assocShape[0].scaleY);
-
-                        assocShape[0].set({ lineLen: Math.sqrt(Math.pow(assocShape[0].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
-                    }
-
-                }
-
-                canvas.setActiveObject(assocShape[0]);
-                scaleDimensions('text');
+                transformDrawing(assocShape, 0);
+                scaleDimensions();
             }
         });
 
@@ -526,8 +799,8 @@
                 startx[temp] = pointer.x;
                 starty[temp] = pointer.y;
                 line = new fabric.Line(points, {
-                    originX: 'center',
-                    originY: 'center',
+                    originX: 'left',
+                    originY: 'top',
                     stroke: 'black',
                     strokeWidth: 2,
                     category: 'shape',
@@ -705,209 +978,7 @@
 			}
 		}
 
-        // code from documentation: http://fabricjs.com/using-transformations
-        var multiply = fabric.util.multiplyTransformMatrices;
-        var invert = fabric.util.invertTransform;
-        function updateDimensions() {
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && !canvas.getActiveObject().isType('path'));
 
-            dims.forEach(o => {
-                if (!o.relationship) {
-                    return;
-                }
-                var relationship = o.relationship;
-                var newTransform = multiply(canvas.getActiveObject().calcTransformMatrix(), relationship);
-                opt = fabric.util.qrDecompose(newTransform);
-                o.set({
-                flipX: false,
-                flipY: false,
-                });
-                o.setPositionByOrigin(
-                { x: opt.translateX, y: opt.translateY },
-                'center',
-                'center'
-                );
-
-
-                o.set(opt);
-                o.setCoords();
-            });
-        }
-
-        function scaleDimensions(){
-            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
-            var valWidth, valHeight, valCirc;
-            var optFontSize;
-            var xArrowWidth;
-            var yArrowWidth;
-
-            dims.forEach(o => {
-                if (o.category === 'dimX'){
-                    if (canvas.getActiveObject().getWidth() < 106){
-                        optFontSize = 15;
-                        xArrowWidth = 18;
-                    }
-                    else{
-                        optFontSize = 29;
-                        xArrowWidth = 34.2;
-                    }
-                    o.set({ fontSize: optFontSize });
-
-                    if (o.isType('textbox')) {
-                        o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
-                        o.set({ left: canvas.getActiveObject().left + xArrowWidth});
-                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
-                        valWidth = o.getWidth();
-                    }
-                    if (o.arrow === 'left'){
-                        o.set({ left: canvas.getActiveObject().left});
-                    }
-                    if (o.arrow === 'right'){
-                        o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
-                    }
-
-                    if (o.positionOutside){
-                        if (o.fontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top - 50});
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top - 30});
-                        }
-                    }
-                    else{
-                        if (o.fontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top + 25 });
-                        }
-                        else {
-                            o.set({top: canvas.getActiveObject().top + 5});
-                        }
-                    }
-                }
-                if (o.category === 'dimY'){
-                    if (canvas.getActiveObject().getHeight() < 106){
-                        optFontSize = 15;
-                        yArrowWidth = 18;
-                    }
-                    else{
-                        optFontSize = 29;
-                        yArrowWidth = 34.2
-                    }
-                    o.set({ fontSize: optFontSize });
-
-                    if (o.isType('textbox')){
-                        o.set({ width: Math.round(canvas.getActiveObject().getHeight()) - yArrowWidth*2});
-                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getHeight()*scale) + ' '})
-                        valHeight = o.getWidth();
-                        o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth});
-                    }
-                    if (o.arrow === 'left'){
-                        o.set({ top: canvas.getActiveObject().top + yArrowWidth});
-                    }
-                    if (o.arrow === 'right'){
-                        o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth*2 - 2});
-                    }
-
-                    if (o.positionOutside){
-                        if (o.fontSize == 29){
-                            o.set({ left: canvas.getActiveObject().left - 50});
-                        }
-                        else{
-                            o.set({ left: canvas.getActiveObject().left - 30});
-                        }
-                    }
-                    else{
-                        if (o.fontSize == 29){
-                            o.set({ left: canvas.getActiveObject().left + 25});
-                        }
-                        else{
-                            o.set({ left: canvas.getActiveObject().left + 5});
-                        }
-                    }
-                }
-                if (o.category === 'dimCirc'){
-                    if (canvas.getActiveObject().getRadiusX()*2 < 106){
-                        optFontSize = 15;
-                        xArrowWidth = 18;
-                    }
-                    else{
-                        optFontSize = 29;
-                        xArrowWidth = 34.2;
-                    }
-                    o.set({ fontSize: optFontSize });
-
-                    if (o.isType('textbox')){
-                        o.set({ width: Math.round(canvas.getActiveObject().getRadiusX()*2) - xArrowWidth*2 });
-
-                        valCirc = o.getWidth();
-                        o.set({ left: canvas.getActiveObject().left + xArrowWidth });
-                        o.set({ text: ' ' + Math.round((canvas.getActiveObject().getRadiusX()*2)*scale) + ' '});
-                    }
-                    if (o.arrow === 'left'){
-                        o.set({ left: canvas.getActiveObject().left });
-                    }
-                    if (o.arrow === 'right'){
-                        o.set({ left: canvas.getActiveObject().left + valCirc + xArrowWidth });
-                    }
-
-                    if (o.positionOutside){
-                        if (optFontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top - 50 });
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top - 30 });
-                        }
-                    }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
-                    }
-                }
-                if (o.category === 'dimLine'){
-                    if (canvas.getActiveObject().lineLen < 106){
-                        optFontSize = 15;
-                    }
-                    else{
-                        optFontSize = 29;
-                    }
-                    xArrowWidth = xArrowWidth = 34.2;
-
-                    if (o.isType('textbox')){
-                        var newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2))
-                        canvas.getActiveObject().set({ lineLen: newLen });
-                        console.log("Line length: " + newLen*scale);
-
-                        o.set({ left: canvas.getActiveObject().left - 50 });
-                        o.set({ fontSize: optFontSize });
-                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
-
-
-                        if (o.positionOutside){
-                            o.set({ top: canvas.getActiveObject().top - 50 });
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top + 20 });
-                        }
-
-
-                    }
-                }
-            });
-            canvas.getActiveObject().setCoords();
-            canvas.renderAll();
-        }
-
-        function bindDimensions() {
-            var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
-            var shapeTransform = canvas.getActiveObject().calcTransformMatrix();
-            var invertedshapeTransform = invert(shapeTransform);
-            dims.forEach(o => {
-                var desiredTransform = multiply(
-                invertedshapeTransform,
-                o.calcTransformMatrix()
-                );
-                // save the desired relation here.
-                o.relationship = desiredTransform;
-            });
-        }
     </script>
                 <br>
             </div>
