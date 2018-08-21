@@ -69,23 +69,23 @@
     <div class="row">
         <div class="col-4">
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
-            <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
             <button id="drawLine" type="button" class="btn btn-light" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
             <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
+            <button id ="undo" type="button" class="btn btn-light disabled" onclick="addCircle()" title="Undo"><i class="fas fa-undo"></i></button>&nbsp;
+            <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object" style="margin-top: 10px"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id ="clearCanvas" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas" style="margin-top: 10px"><i class="fas fa-trash-alt"></i></button>
         </div>
         <div class="col-4">
             <div class="input-group">
                 <div class="input-group-prepend">
-
-                    <span class="input-group-text" id="">Scale</span>
-                    <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()"><i class="fas fa-i-cursor"></i></button>&nbsp;
+                    <span class="input-group-text" id="">Scale (grid unit size)</span>
                 </div>
-                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="{% if drawing %}{{ drawing.scale }}{% else %}0.25{% endif %}">&nbsp;
+                <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="{% if drawing %}{{ drawing.scale }}{% else %}5{% endif %}">&nbsp;
 
             </div>
+        <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()">Manual Scale Adjust &nbsp;<i class="fas fa-i-cursor"></i></button>&nbsp;
         <button id ="zoomIn" type="button" class="btn btn-light" onclick="zoomIn()" title="Zoom in" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-plus"></i></button>&nbsp;
         <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;
         </div>
@@ -195,7 +195,7 @@
         var constStrokeWidth = 2;
         var grid = 20;
         {% if drawing %}
-            var scale = {{ drawing.scale }};
+            var scale = {{ drawing.scale }} / 20;
         {% else %}
             var scale = 0.25;
         {% endif %}
@@ -206,8 +206,8 @@
 
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng']));
-            document.getElementById('id_scale').value = scale;
+            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
+            document.getElementById('id_scale').value = scale*20;
             document.getElementById('id_json_string').value= drawing_serial;
         }
 
@@ -218,6 +218,7 @@
             //  iterate through shape objects, performing scaleDimensions() on them to ensure dimensions are to scale
             canvas.forEachObject(function (object) {
                 if (object.category === 'shape'){
+                    object.setControlsVisibility({ mtr: false });
                     canvas.setActiveObject(object);
                     scaleDimensions();
                 }
@@ -403,9 +404,10 @@
              */
 
             var shapes = canvas.getObjects().filter(o => o.category === 'shape');
-            scale = document.getElementById('scaleInput').value;
+            scale = document.getElementById('scaleInput').value/20;
+            console.log("Scale is: " + scale);
 
-            document.getElementById("scaleInput").value = scale;
+            document.getElementById("scaleInput").value = scale*20;
                 shapes.forEach( o => {
                     canvas.setActiveObject(o);
                     scaleDimensions();
@@ -789,7 +791,7 @@
                 else if(canvas.getActiveObject().category === 'dimLine'){
                     scale = canvas.getActiveObject().text/assocShape[0].lineLen;
                 }
-                document.getElementById("scaleInput").value = scale;
+                document.getElementById("scaleInput").value = scale*20;
                 shapes.forEach( o => {
                     canvas.setActiveObject(o);
                     scaleDimensions();
