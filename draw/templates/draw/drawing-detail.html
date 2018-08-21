@@ -71,9 +71,11 @@
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
             <button id="drawLine" type="button" class="btn btn-light" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
+            <button id="drawMeasure" type="button" class="btn btn-light disabled" onclick="addMeasure()" title="Line"><i class="fas fa-tape"></i></button>&nbsp;
             <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
-            <button id ="undo" type="button" class="btn btn-light disabled" onclick="addCircle()" title="Undo"><i class="fas fa-undo"></i></button>&nbsp;
+            <button id ="undo" type="button" class="btn btn-light " onclick="undo()" title="Undo" style="margin-top: 10px"><i class="fas fa-undo"></i></button>&nbsp;
+            <button id ="redo" type="button" class="btn btn-light " onclick="redo()" title="Redo" style="margin-top: 10px"><i class="fas fa-redo"></i></button>&nbsp;
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object" style="margin-top: 10px"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id ="clearCanvas" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas" style="margin-top: 10px"><i class="fas fa-trash-alt"></i></button>
         </div>
@@ -186,11 +188,9 @@
 		var temp = 0;
 		var graphtype;
         var text;
-
         var canvasInteractive = true;
         var scalingMode = true;
         var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
-        var drawing_serial;
         var arrowWidth = 34.2;
         var constStrokeWidth = 2;
         var grid = 20;
@@ -204,13 +204,15 @@
         setInteractive();
         canvas.renderAll();
 
+        //  Saves drawing
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
+            var drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
             document.getElementById('id_scale').value = scale*20;
             document.getElementById('id_json_string').value= drawing_serial;
         }
 
+        //  Loads drawing
         function loadJSON(){
 
             canvas.loadFromJSON({{ drawing.json_string | safe }});
@@ -225,9 +227,67 @@
             });
         }
 
+        //http://jsfiddle.net/phxqt3wh/3/
+        var state = [];
+        var mods = 0;
+
+        //  Undoes previous action
+        function undo(){
+            if (mods < state.length){
+                console.log("Undoing..");
+                canvas.clear().renderAll();
+                canvas.loadFromJSON(state[state.length - 1 - mods - 1]);
+                canvas.setBackgroundColor('#f8f9fa');
+                renderGrid();
+                canvas.forEachObject(function (object) {
+                    if (object.category === 'shape'){
+                        object.setControlsVisibility({ mtr: false });
+                        canvas.setActiveObject(object);
+                        scaleDimensions();
+                    }
+                });
+                canvas.renderAll();
+                mods += 1;
+                //tempSave();
+            }
+        }
+
+        //  Cancels undo action
+        function redo(){
+            if (mods > 0){
+                console.log("Redoing..");
+                canvas.clear().renderAll();
+                canvas.loadFromJSON(state[state.length - 1 - mods + 1]);
+                renderGrid();
+                canvas.forEachObject(function (object) {
+                    if (object.category === 'shape'){
+                        object.setControlsVisibility({ mtr: false });
+                        canvas.setActiveObject(object);
+                        scaleDimensions();
+                    }
+                });
+                mods -= 1;
+                //tempSave();
+            }
+        }
+
+        function tempSave(save){
+            console.log("Temp saving..");
+            tempJson = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
+            state.push(tempJson);
+        }
+
+        canvas.on(
+            'object:modified', function(){
+                tempSave();
+            },
+            'object:added', function(){
+                tempSave();
+            });
+
         //  create grid
         function renderGrid(){
-            console.log("Rendering grid");
+            console.log("Rendering grid..");
             for (var i = 0; i < (800 / grid); i++) {
                 var lineH = new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
                 var lineV = new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
@@ -861,7 +921,7 @@
             if (canvasInteractive){
                 if (canvas.getActiveObject() != null){
                     canvas.getActiveObject().on('moving', updateDimensions);
-                    canvas.getActiveObject().on('rotating', updateDimensions);
+                    //canvas.getActiveObject().on('rotating', updateDimensions);
                     canvas.getActiveObject().on('scaling', scaleDimensions);
                     bindDimensions();
                 }
@@ -1007,6 +1067,7 @@
                 canvas.setActiveObject(currentShape);
                 scaleDimensions();
                 setInteractMode();
+                tempSave();
             }
 
             //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
