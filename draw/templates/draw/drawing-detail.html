@@ -71,7 +71,7 @@
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
             <button id="drawLine" type="button" class="btn btn-light" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
-            <button id="drawMeasure" type="button" class="btn btn-light disabled" onclick="addMeasure()" title="Line"><i class="fas fa-tape"></i></button>&nbsp;
+            <button id="drawMeasure" type="button" class="btn btn-light" onclick="addMeasure()" title="Line"><i class="fas fa-tape"></i></button>&nbsp;
             <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
             <button id ="undo" type="button" class="btn btn-light " onclick="undo()" title="Undo" style="margin-top: 10px"><i class="fas fa-undo"></i></button>&nbsp;
@@ -93,12 +93,19 @@
         </div>
         <div class="col-2">
             <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Show or Hide selected shape's X dimension">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
-
-            <button id="repositionDimX" type="button" class="btn btn-light" onclick="repositionDimX()" title="Reposition selected shape's X dimension" style="margin-top: 10px">Reposition <i class="fas fa-arrows-alt-h"></i></button>
+            <button id ="hideDimY" type="button" class="btn btn-light" onclick="hideDimY()" title="Show or Hide selected shape's Y dimension" style="margin-top: 10px">Show/Hide <i class="fas fa-arrows-alt-v"></i></button>&nbsp;
         </div>
         <div class="col-2">
-            <button id ="hideDimY" type="button" class="btn btn-light" onclick="hideDimY()" title="Show or Hide selected shape's Y dimension">Show/Hide <i class="fas fa-arrows-alt-v"></i></button>&nbsp;
-            <button id="repositionDimY" type="button" class="btn btn-light" onclick="repositionDimY()" title="Reposition selected shape's Y dimension" style="margin-top: 10px">Reposition <i class="fas fa-arrows-alt-v"></i></button>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="">Position</span>
+                </div>
+                <input id="posVal" type="text" class="form-control" placeholder="0" value="0">&nbsp;
+
+            </div>
+            <button id ="posUp" type="button" class="btn btn-light" onclick="posUp()" title="Raise selected object's position" style="margin-top: 10px"><i class="fas fa-arrow-up"></i></button>&nbsp;
+            <button id ="posDown" type="button" class="btn btn-light" onclick="posDown()" title="Lower selected object's position" style="margin-top: 10px"><i class="fas fa-arrow-down"></i></button>&nbsp;
+
         </div>
     </div>
         <canvas id="c" width="800" height="700" style="border: 1px solid black; margin-top: 5px"></canvas>
@@ -207,7 +214,7 @@
         //  Saves drawing
         function saveJSON(){
             //  Need to pass our custom 'id' property to ensure it's loaded
-            var drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
+            var drawing_serial = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOffset', 'lineLen', 'LineAng', 'hasControls']));
             document.getElementById('id_scale').value = scale*20;
             document.getElementById('id_json_string').value= drawing_serial;
         }
@@ -273,17 +280,68 @@
 
         function tempSave(save){
             console.log("Temp saving..");
-            tempJson = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOutside', 'lineLen', 'LineAng', 'hasControls']));
+            tempJson = JSON.stringify(canvas.toJSON(['id', 'category', 'arrow', 'hidden', 'positionOffset', 'lineLen', 'LineAng', 'hasControls']));
             state.push(tempJson);
         }
 
-        canvas.on(
+        /*canvas.on(
             'object:modified', function(){
                 tempSave();
             },
             'object:added', function(){
                 tempSave();
-            });
+            });*/
+
+        function posUp(){
+            canvas.getActiveObject().bringForward();
+            //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
+            document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
+        }
+
+        function posDown(){
+            canvas.getActiveObject().sendBackwards();
+            //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
+            document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
+        }
+
+        function addMeasure(){
+            var line =  canvas.getActiveObject();
+            if(canvas.getActiveObject().isType('line')){
+                if ( canvas.getActiveObject().stroke === 'gray'){
+                    var oldDim = canvas.getObjects().filter(o => o.category === 'dimLine' && o.id === line.id);
+                    canvas.getActiveObject().set({ strokeDashArray: 0, stroke: 'black' });
+                    canvas.remove(oldDim[0]);
+                    dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
+                    canvas.add(dimX);
+                    scaleDimensions();
+
+                }
+                else{
+                    canvas.getActiveObject().set({ strokeDashArray: [5, 5], stroke: 'gray' });
+
+                    var oldDim = canvas.getObjects().filter(o => o.category === 'dimLine' && o.id === line.id);
+                    canvas.remove(oldDim[0]);
+
+                    dimXLeft = new fabric.Text('⟵', { id: line.id, arrow: 'left', category: 'dimLine', arrow: 'left', hidden: false, hasControls: false, fontSize: 29 });
+                    dimX = new fabric.Textbox(' ' + Math.round(line.lineLen*scale) + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false, top: 10, width: line.lineLen - arrowWidth*2, left: arrowWidth*1.3, hasControls: false, fontSize: 29 });
+                    dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: line.lineLen - arrowWidth*1.3, hasControls: false, fontSize: 29 });
+
+                    var dimLine = new fabric.Group([dimXLeft, dimX, dimXRight], { left: line.left, top: line.top + 30, angle: line.lineAng, originX: 'center', id: line.id, category: 'dimLine', height: 10, hasControls: false });
+                    console.log("Line angle: " + line.lineAng);
+
+
+                    if (line.lineAng > 90 || line.lineAng < -90){
+
+                        dimX.toggle('flipX');
+                        dimX.toggle('flipY')
+                        console.log("Flipped " + dimX.getFlipX());
+                    }
+
+                    //dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
+                    canvas.add(dimLine);
+                }
+            }
+        }
 
         //  create grid
         function renderGrid(){
@@ -531,74 +589,6 @@
             canvas.renderAll();
         }
 
-        function repositionDimX(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
-
-            dims.forEach(o => {
-                o.set({ positionOutside: !o.positionOutside });
-
-                if (o.category === 'dimCirc'){
-                    if (!o.positionOutside){
-                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
-                    }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top - 50 });
-                    }
-                }
-                else if (o.category === 'dimLine'){
-                    if (!o.positionOutside){
-                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/1.5 });
-                    }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/2 });
-                    }
-                }
-                else if (!o.positionOutside){
-                    if (o.fontSize == 29){
-                        o.set({ top: canvas.getActiveObject().top + 25 });
-                    }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top + 5 });
-                    }
-                }
-                else{
-                    if (o.fontSize == 29){
-                        o.set({ top: canvas.getActiveObject().top - 50 });
-                    }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top - 30 });
-                    }
-                }
-            });
-            canvas.renderAll();
-        }
-
-        function repositionDimY(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimY');
-
-            dims.forEach( o => {
-                o.set({ positionOutside: !o.positionOutside});
-
-                if (!o.positionOutside){
-                    if (o.fontSize == 29){
-                        o.set({ left: canvas.getActiveObject().left + 25 });
-                    }
-                    else{
-                        o.set({ left: canvas.getActiveObject().left + 5 });
-                    }
-                }
-                else{
-                    if (o.fontSize == 29){
-                        o.set({ left: canvas.getActiveObject().left - 50});
-                    }
-                    else{
-                        o.set({ left: canvas.getActiveObject().left - 30});
-                    }
-                }
-            });
-            canvas.renderAll();
-        }
-
         function transformDrawing(assocShape, i){
 
             if (canvas.getActiveObject().category == 'dimX'){
@@ -632,6 +622,35 @@
         var multiply = fabric.util.multiplyTransformMatrices;
         var invert = fabric.util.invertTransform;
         function updateDimensions() {
+
+            if (canvas.getActiveObject().isType('text') || canvas.getActiveObject().category === 'dimLine'){
+                // code to move the selected dim's counterparts, so that they all move instead of just single arrow
+                var assocDims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === canvas.getActiveObject().category);
+
+                assocDims.forEach(o => {
+                    if (!o.relationship) {
+                        return;
+                    }
+                    var relationship = o.relationship;
+                    var newTransform = multiply(canvas.getActiveObject().calcTransformMatrix(), relationship);
+                    opt = fabric.util.qrDecompose(newTransform);
+                    o.set({
+                    flipX: false,
+                    flipY: false,
+                    });
+                    o.setPositionByOrigin(
+                    { x: opt.translateX, y: opt.translateY },
+                    'center',
+                    'center'
+                    );
+
+                    o.set(opt);
+                    o.setCoords();
+                });
+
+                return;
+            }
+
             var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && !canvas.getActiveObject().isType('path'));
 
             dims.forEach(o => {
@@ -651,11 +670,11 @@
                 'center'
                 );
 
-
                 o.set(opt);
                 o.setCoords();
             });
         }
+
 
         function scaleDimensions(){
             var dims = canvas.getObjects().filter(o => o.id == canvas.getActiveObject().id);
@@ -665,7 +684,9 @@
             var yArrowWidth;
 
             dims.forEach(o => {
+
                 if (o.category === 'dimX'){
+
                     if (canvas.getActiveObject().getWidth() < 106){
                         optFontSize = 15;
                         xArrowWidth = 18;
@@ -689,21 +710,12 @@
                         o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
                     }
 
-                    if (o.positionOutside){
-                        if (o.fontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top - 50});
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top - 30});
-                        }
+                    // anchor the dimension label keeping it from getting lost when the shape is scaled certain ways
+                    if (o.getTop() < canvas.getActiveObject().getTop() - 55){
+                        o.set({ top: canvas.getActiveObject().getTop() - 50 });
                     }
-                    else{
-                        if (o.fontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top + 25 });
-                        }
-                        else {
-                            o.set({top: canvas.getActiveObject().top + 5});
-                        }
+                    else if (o.getTop() > canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight()){
+                        o.set({ top: canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight() });
                     }
                 }
                 if (o.category === 'dimY'){
@@ -730,22 +742,14 @@
                         o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth*2 - 2});
                     }
 
-                    if (o.positionOutside){
-                        if (o.fontSize == 29){
-                            o.set({ left: canvas.getActiveObject().left - 50});
-                        }
-                        else{
-                            o.set({ left: canvas.getActiveObject().left - 30});
-                        }
+                    // anchor
+                    if (o.getLeft() < canvas.getActiveObject().getLeft() - 55){
+                        o.set({ left: canvas.getActiveObject().getLeft() - 50 });
                     }
-                    else{
-                        if (o.fontSize == 29){
-                            o.set({ left: canvas.getActiveObject().left + 25});
-                        }
-                        else{
-                            o.set({ left: canvas.getActiveObject().left + 5});
-                        }
+                    else if (o.getLeft() > canvas.getActiveObject().getLeft() + canvas.getActiveObject().getWidth() + 20 ){
+                        o.set({ left: canvas.getActiveObject().getLeft() + canvas.getActiveObject().getWidth() + 20 });
                     }
+
                 }
                 if (o.category === 'dimCirc'){
                     if (canvas.getActiveObject().getRadiusX()*2 < 106){
@@ -772,16 +776,11 @@
                         o.set({ left: canvas.getActiveObject().left + valCirc + xArrowWidth });
                     }
 
-                    if (o.positionOutside){
-                        if (optFontSize == 29){
-                            o.set({ top: canvas.getActiveObject().top - 50 });
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top - 30 });
-                        }
+                    if (o.getTop() < canvas.getActiveObject().getTop() - 55){
+                        o.set({ top: canvas.getActiveObject().getTop() - 50 });
                     }
-                    else{
-                        o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getRadiusX()*0.85});
+                    else if (o.getTop() > canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight()){
+                        o.set({ top: canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight() });
                     }
                 }
                 if (o.category === 'dimLine'){
@@ -793,25 +792,44 @@
                     }
                     xArrowWidth = xArrowWidth = 34.2;
 
+
+                    /*o.forEachObject(function (object){
+                        if (object.isType('textbox')){
+                            var newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2))
+                            canvas.getActiveObject().set({ lineLen: newLen });
+                            console.log("Line length: " + newLen*scale);
+
+
+                            object.set({ fontSize: optFontSize });
+                            object.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
+                            //object.set({ width: canvas.getActiveObject().lineLen - arrowWidth*2 });
+                            //object.set({ left: 0 });
+                            //object.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/2 });
+                        }
+                        if (object.arrow === 'left'){
+                            object.set({ left: -canvas.getActiveObject().lineLen/2 });
+                        }
+                    })*/
+
                     if (o.isType('textbox')){
                         var newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2))
                         canvas.getActiveObject().set({ lineLen: newLen });
                         console.log("Line length: " + newLen*scale);
 
-                        o.set({ left: canvas.getActiveObject().left + canvas.getActiveObject().width/2 });
+
                         o.set({ fontSize: optFontSize });
                         o.set({ text: ' ' + Math.round(canvas.getActiveObject().lineLen*scale) + ' '});
-
-
-                        if (o.positionOutside){
-                            o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject().getHeight()/2 });
-                        }
-                        else{
-                            o.set({ top: canvas.getActiveObject().top + canvas.getActiveObject()/1.5 });
-                        }
-
-
+                        //object.set({ width: canvas.getActiveObject().lineLen - arrowWidth*2 });
+                        o.set({ left: canvas.getActiveObject().left });
+                        o.set({ top: canvas.getActiveObject().top });
                     }
+
+
+                    //dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false, top: 10, width: line.lineLen - arrowWidth*2, left: arrowWidth*1.3 });
+                    //dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: lineLen - arrowWidth*1.3 });
+
+                    //o.set({ width: canvas.getActiveObject().lineLen });
+
                 }
             });
             canvas.getActiveObject().setCoords();
@@ -909,19 +927,21 @@
                 startx[temp] = pointer.x;
                 starty[temp] = pointer.y;
                 line = new fabric.Line(points, {
-                    originX: 'left',
-                    originY: 'top',
+                    originX: 'center',
+                    originY: 'center',
                     stroke: 'black',
                     strokeWidth: 2,
                     category: 'shape',
-                    hasControls: false
+                    //hasControls: false
                 });
                 canvas.add(line);
             }
             if (canvasInteractive){
-                if (canvas.getActiveObject() != null){
+                if (canvas.getActiveObject()){
+
                     canvas.getActiveObject().on('moving', updateDimensions);
                     //canvas.getActiveObject().on('rotating', updateDimensions);
+
                     canvas.getActiveObject().on('scaling', scaleDimensions);
                     bindDimensions();
                 }
@@ -983,7 +1003,7 @@
 
         //  what do when mouse button is lifted
         canvas.on('mouse:up', function(o){
-            canvas.remove(text);
+            //canvas.remove(text);
             isDown = false;
             var hopefullyUniqueId = Math.random().toString(16).slice(2);
             var currentShape;
@@ -994,13 +1014,13 @@
 
                 if (rect.width != 0 && rect.height != 0){
 
-                    dimXLeft = new fabric.Text('⟵', { arrow: 'left', id: rect.id, category: 'dimX' });
-                    dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: rect.id, category: 'dimX' });
-                    dimXRight = new fabric.Text('⟶', { id: rect.id, arrow: 'right', category: 'dimX'});
+                    dimXLeft = new fabric.Text('⟵', { arrow: 'left', id: rect.id, category: 'dimX', top: rect.top - 50 });
+                    dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: rect.id, category: 'dimX', top: rect.top - 50 });
+                    dimXRight = new fabric.Text('⟶', { id: rect.id, arrow: 'right', category: 'dimX', left: rect.left+100, top: rect.top - 50});
 
-                    dimYTop = new fabric.Text('⟶', { angle: 270, id: rect.id, arrow: 'left', category: 'dimY' });
-                    dimY = new fabric.Textbox(' ' + Math.round(rect.getHeight()*scale) + ' ', { angle: 270, textAlign: 'center', id: rect.id, category: 'dimY' });
-                    dimYBottom = new fabric.Text('⟵', { angle: 270, id: rect.id, arrow: 'right', category: 'dimY' });
+                    dimYTop = new fabric.Text('⟶', { angle: 270, id: rect.id, arrow: 'left', category: 'dimY', left: rect.left - 50 });
+                    dimY = new fabric.Textbox(' ' + Math.round(rect.getHeight()*scale) + ' ', { angle: 270, textAlign: 'center', id: rect.id, category: 'dimY', left: rect.left - 50 });
+                    dimYBottom = new fabric.Text('⟵', { angle: 270, id: rect.id, arrow: 'right', category: 'dimY', left: rect.left - 50 });
 
                     rect.setCoords();
                     canvas.add(dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom);
@@ -1012,9 +1032,9 @@
                 circ.set({ id: hopefullyUniqueId });
                 circ.setControlsVisibility({ mtr: false });
                 if (circ.radius != 0){
-                    dimXLeft = new fabric.Text('⟵', { id: circ.id, arrow: 'left', category: 'dimCirc', arrow: 'left', hidden: false });
-                    dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: circ.id, category: 'dimCirc', hidden: false  });
-                    dimXRight = new fabric.Text('⟶', { id: circ.id, category: 'dimCirc', arrow: 'right', hidden: false  });
+                    dimXLeft = new fabric.Text('⟵', { id: circ.id, arrow: 'left', category: 'dimCirc', arrow: 'left', hidden: false, top: circ.top - 50 });
+                    dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: circ.id, category: 'dimCirc', hidden: false, top: circ.top - 50  });
+                    dimXRight = new fabric.Text('⟶', { id: circ.id, category: 'dimCirc', arrow: 'right', hidden: false, top: circ.top - 50  });
 
                     circ.setCoords();
                     canvas.add(dimXLeft, dimX, dimXRight);
@@ -1031,22 +1051,32 @@
                 var lineLen = Math.sqrt(Math.pow(line.getHeight(), 2) + Math.pow(line.getWidth(), 2));
                 line.set({ lineLen: lineLen });
 
-                //  arrows ommitted, however if they were to be added they would follow same pattern as other X-dimensions
+                /*
+                Best option here will be to just put the below dimensions into a group,
+                The group can then be called upon to trigger necessary events.
+                 */
+
+
+
+                /*dimXLeft = new fabric.Text('⟵', { id: line.id, arrow: 'left', category: 'dimLine', arrow: 'left', hidden: false });
+                dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false, top: 10, width: line.lineLen - arrowWidth*2, left: arrowWidth*1.3 });
+                dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: lineLen - arrowWidth*1.3 });
+
+
+
+                var dimLine = new fabric.Group([dimXLeft, dimX, dimXRight], { left: line.left, top: line.top + 30, angle: line.lineAng, originX: 'center', id: line.id, category: 'dimLine', height: 10 });
+                console.log("Line angle: " + line.lineAng);
+
+
+                if (line.lineAng > 90 || line.lineAng < -90){
+
+                    dimX.toggle('flipX');
+                    dimX.toggle('flipY')
+                    console.log("Flipped " + dimX.getFlipX());
+                }*/
+
                 dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
-
                 canvas.add(dimX);
-
-                console.log("X1: " + line.x1);
-                console.log("left: " + line.left);
-
-                console.log("Y1: " + line.y1);
-                console.log("top: " + line.top);
-
-                console.log("X2: " + line.x2);
-                console.log("Y2: " + line.y2);
-                console.log("Width: " + line.width);
-                console.log("Height: " + line.height);
-
             }
 
             //  Apply common properties to dimension objects
@@ -1060,14 +1090,15 @@
                 }
                 dims.forEach(function (dimObject) {
                     //  Set common properties
-                    dimObject.set({ fontSize: 29, hidden: false, positionOutside: true, hasControls: false });
-
+                    dimObject.set({ fontSize: 29, hidden: false, positionOffset: 0, hasControls: false });
                 });
 
                 canvas.setActiveObject(currentShape);
                 scaleDimensions();
+                scaleDimensions();
+
                 setInteractMode();
-                tempSave();
+                //tempSave();
             }
 
             //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
@@ -1076,11 +1107,19 @@
                 canvas.getActiveObject().selectAll();
             }
 
+            if (canvas.getActiveObject() && canvas.getActiveObject().isType('text')){
+                //  Code for setting dim position offset here.
+                var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
+
+                canvas.setActiveObject(assocShape[0]);
+                scaleDimensions();
+                scaleDimensions();
+            }
+            document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
             setInteractive();
             setInteractive();
 
         });
-
 
         //  http://jsfiddle.net/ydtt94zm/2/
         var Calculate={
