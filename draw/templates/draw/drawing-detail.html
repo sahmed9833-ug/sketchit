@@ -293,7 +293,13 @@
             });*/
 
         function posUp(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+
+
             canvas.getActiveObject().bringForward();
+            dims.forEach( o => {
+                o.bringToFront();
+            });
             //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
             document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
         }
