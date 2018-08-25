@@ -46,6 +46,7 @@
         <div class="row">
         <div class="col-4">
             <button id ="canvasInteract" type="button" class="btn btn-light" onclick="setInteractMode()" title="Move objects"><i class="fas fa-arrows-alt"></i></button>&nbsp;
+            <button id ="duplicateObject" type="button" class="btn btn-light" onclick="duplicate()" title="Duplicate selected object"><i class="far fa-clone"></i></button>&nbsp;
             <button id="freeDraw" type="button" class="btn btn-light" role="button" aria-pressed="true" onclick="setDrawingMode()" title="Free Draw"><i class="fas fa-pencil-alt"></i></button>&nbsp;
             <button id="drawLine" type="button" class="btn btn-light" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
             <button id="drawMeasure" type="button" class="btn btn-light" onclick="addMeasure()" title="Line"><i class="fas fa-tape"></i></button>&nbsp;
@@ -258,6 +259,81 @@
             canvas.getActiveObject().sendBackwards();
             //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
             document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
+        }
+
+        // copy+paste code from Fabric.js documentation: http://fabricjs.com/copypaste
+        function duplicate(){
+            var hopefullyUniqueId = Math.random().toString(16).slice(2);
+
+            // copy selected object to 'clipboard'
+            canvas.getActiveObject().clone(function(cloned) {
+                _clipboard = cloned;
+            });
+
+            //
+            var dimXes = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
+            var dimYes = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimY');
+
+
+            // clone again, so you can do multiple copies.
+            _clipboard.clone(function(clonedObj) {
+                canvas.discardActiveObject();
+                clonedObj.set({
+                    left: clonedObj.left + 10,
+                    top: clonedObj.top + 10,
+                    evented: true,
+                    id: hopefullyUniqueId,
+                });
+
+                if (dimXes[0] != undefined && dimXes[0].category !== 'dimLine')
+                    var dimXLeft = new fabric.Text('⟵', { arrow: 'left', id: clonedObj.id, category: dimXes[0].category, top: clonedObj.top - 50, hidden: dimXes[0].hidden });
+                if (dimXes[0] != undefined)
+                    var dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: clonedObj.id, category: dimXes[0].category, top: clonedObj.top - 50, hidden: dimXes[0].hidden });
+                if (dimXes[0] != undefined && dimXes[0].category !== 'dimLine')
+                    var dimXRight = new fabric.Text('⟶', { id: clonedObj.id, arrow: 'right', category: dimXes[0].category, left: clonedObj.left+100, top: clonedObj.top - 50, hidden: dimXes[0].hidden });
+
+                if (dimYes[0] != undefined){
+                    console.log("This a rectangle");
+                    var dimYTop = new fabric.Text('⟶', { angle: 270, id: clonedObj.id, arrow: 'left', category: 'dimY', left: clonedObj.left - 50, hidden: dimYes[0].hidden });
+                    var dimY = new fabric.Textbox(' ' + Math.round(clonedObj.getHeight()*scale) + ' ', { angle: 270, textAlign: 'center', id: clonedObj.id, category: 'dimY', left: clonedObj.left - 50, hidden: dimYes[0].hidden });
+                    var dimYBottom = new fabric.Text('⟵', { angle: 270, id: clonedObj.id, arrow: 'right', category: 'dimY', left: clonedObj.left - 50, hidden: dimYes[0].hidden });
+                }
+
+                if (clonedObj.type === 'activeSelection') {
+                    // active selection needs a reference to the canvas.
+                    clonedObj.canvas = canvas;
+                    clonedObj.forEachObject(function(obj) {
+                        canvas.add(obj);
+                    });
+                    // this should solve the unselectability
+                    clonedObj.setCoords();
+                } else {
+                    canvas.add(clonedObj);
+
+                    if (dimXes[0] != undefined && dimXes[0].category !== 'dimLine')
+                        canvas.add(dimXLeft);
+                    canvas.add(dimX);
+                    if (dimXes[0] != undefined && dimXes[0].category !== 'dimLine')
+                        canvas.add(dimXRight);
+
+                    if (dimYes[0] != undefined){
+                        canvas.add(dimYTop, dimY, dimYBottom);
+                    }
+                }
+                _clipboard.top += 10;
+                _clipboard.left += 10;
+                canvas.setActiveObject(clonedObj);
+                scaleDimensions();
+                if (dimXes[0] != undefined && dimXes[0].hidden){
+                    hideDimX();
+                    hideDimX();
+                }
+                if (dimYes[0] != undefined && dimYes[0].hidden){
+                    hideDimY();
+                    hideDimY();
+                }
+                canvas.renderAll();
+            });
         }
 
         function addMeasure(){
@@ -489,10 +565,12 @@
         }
 
         function clearCanvas(){
+            if (window.confirm("Are you sure you would like to clear the canvas?")){
+                canvas.clear();
+                canvas.setBackgroundColor('#f8f9fa');
+                renderGrid();
+            }
 
-            canvas.clear();
-            canvas.setBackgroundColor('#f8f9fa');
-            renderGrid();
         }
 
         //  toggle off methods
@@ -521,7 +599,7 @@
             var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
 
             dims.forEach(o => {
-                if (o.opacity == 0){
+                if (o.hidden){
                     o.set({ opacity: 100, selectable: true, hidden: false });
                 }
                 else{
@@ -535,7 +613,7 @@
             var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category == 'dimY');
 
             dims.forEach(o => {
-                if (o.opacity == 0){
+                if (o.hidden){
                     o.set({ opacity: 100, selectable: true, hidden: false });
                 }
                 else{
@@ -667,12 +745,12 @@
                     }
 
                     // anchor the dimension label keeping it from getting lost when the shape is scaled certain ways
-                    if (o.getTop() < canvas.getActiveObject().getTop() - 55){
+                    /*if (o.getTop() < canvas.getActiveObject().getTop() - 55){
                         o.set({ top: canvas.getActiveObject().getTop() - 50 });
                     }
                     else if (o.getTop() > canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight()){
                         o.set({ top: canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight() });
-                    }
+                    }*/
                 }
                 if (o.category === 'dimY'){
                     if (canvas.getActiveObject().getHeight() < 106){
@@ -699,12 +777,12 @@
                     }
 
                     // anchor
-                    if (o.getLeft() < canvas.getActiveObject().getLeft() - 55){
+                    /*if (o.getLeft() < canvas.getActiveObject().getLeft() - 55){
                         o.set({ left: canvas.getActiveObject().getLeft() - 50 });
                     }
                     else if (o.getLeft() > canvas.getActiveObject().getLeft() + canvas.getActiveObject().getWidth() + 20 ){
                         o.set({ left: canvas.getActiveObject().getLeft() + canvas.getActiveObject().getWidth() + 20 });
-                    }
+                    }*/
 
                 }
                 if (o.category === 'dimCirc'){
@@ -732,12 +810,12 @@
                         o.set({ left: canvas.getActiveObject().left + valCirc + xArrowWidth });
                     }
 
-                    if (o.getTop() < canvas.getActiveObject().getTop() - 55){
+                    /*if (o.getTop() < canvas.getActiveObject().getTop() - 55){
                         o.set({ top: canvas.getActiveObject().getTop() - 50 });
                     }
                     else if (o.getTop() > canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight()){
                         o.set({ top: canvas.getActiveObject().getTop() + canvas.getActiveObject().getHeight() });
-                    }
+                    }*/
                 }
                 if (o.category === 'dimLine'){
                     if (canvas.getActiveObject().lineLen < 106){
