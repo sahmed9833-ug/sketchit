@@ -13,6 +13,7 @@
 {% endblock %}
 {% block scripts %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.7.22/fabric.min.js"></script>
+    <script src="http://danml.com/js/download.js"></script>
 {% endblock %}
 
 {% block detail_panel %}
@@ -77,8 +78,11 @@
             <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
             <button id ="undo" type="button" class="btn btn-light " onclick="undo()" title="Undo" style="margin-top: 10px"><i class="fas fa-undo"></i></button>&nbsp;
             <button id ="redo" type="button" class="btn btn-light " onclick="redo()" title="Redo" style="margin-top: 10px"><i class="fas fa-redo"></i></button>&nbsp;
+            <button id ="skewXMore" type="button" class="btn btn-light" onclick="skewXMore()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-plus"></i></button>
+            <button id ="skewXLess" type="button" class="btn btn-light" onclick="skewXLess()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-minus"></i></button><br>
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object" style="margin-top: 10px"><i class="fas fa-eraser"></i></button>&nbsp;
             <button id ="clearCanvas" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas" style="margin-top: 10px"><i class="fas fa-trash-alt"></i></button>
+
         </div>
         <div class="col-4">
             <div class="input-group">
@@ -106,6 +110,7 @@
             </div>
             <button id ="posUp" type="button" class="btn btn-light" onclick="posUp()" title="Raise selected object's position" style="margin-top: 10px"><i class="fas fa-arrow-up"></i></button>&nbsp;
             <button id ="posDown" type="button" class="btn btn-light" onclick="posDown()" title="Lower selected object's position" style="margin-top: 10px"><i class="fas fa-arrow-down"></i></button>&nbsp;
+            <button id ="imageExport" type="button" class="btn btn-light" onclick="convertToImage()" title="Convert canvas to image" style="margin-top: 10px">Export as PNG</button>&nbsp;
 
         </div>
     </div>
@@ -211,6 +216,10 @@
         renderGrid();
         setInteractive();
         canvas.renderAll();
+
+        function convertToImage() {
+            download(canvas.toDataURL('png'), 'sketch', 'image/png');
+        }
 
         //  Saves drawing
         function saveJSON(){
@@ -426,12 +435,12 @@
             }
         }
 
-        //  create grid
+        //  create grid - must account for zooming out.
         function renderGrid(){
             console.log("Rendering grid..");
-            for (var i = 0; i < (800 / grid); i++) {
-                var lineH = new fabric.Line([ i * grid, 0, i * grid, 800], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
-                var lineV = new fabric.Line([ 0, i * grid, 800, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
+            for (var i = 0; i < (1500 / grid); i++) {
+                var lineH = new fabric.Line([ i * grid, 0, i * grid, 1500], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
+                var lineV = new fabric.Line([ 0, i * grid, 1500, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
                 canvas.add(lineH);
                 canvas.add(lineV);
                 canvas.sendToBack(lineH);
@@ -449,6 +458,15 @@
                 scalingMode = true;
                 document.getElementById("setScaling").className += " btn-dark";
             }
+        }
+
+        function skewXMore(){
+            canvas.getActiveObject().set({ skewX: canvas.getActiveObject().skewX + 5 });
+            canvas.renderAll();
+        }
+        function skewXLess(){
+            canvas.getActiveObject().set({ skewX: canvas.getActiveObject().skewX - 5 });
+            canvas.renderAll();
         }
 
         function zoom(){
@@ -486,20 +504,31 @@
             }
         }
 
+        var zoomLevel = 0;
+
         function zoomIn(){
-            //canvas.setZoom(canvas.getZoom() * 1.1);
+            zoomLevel -= 1;
+            console.log("zoom level: " + zoomLevel);
+            canvas.setZoom(canvas.getZoom() * 1.1);
             //var dims = canvas.getObjects().filter(o => o.category !== 'shape' && o.id !== 'grid');
 
-            scale = scale/1.09;
-            zoom();
-
+            //scale = scale/1.09;
+            //zoom();
+            canvas.renderAll();
         }
 
         function zoomOut(){
-            //canvas.getActiveObject().setZoom(canvas.getZoom() / 1.1);
+            console.log("zoom level: " + zoomLevel);
 
-            scale = scale*1.09;
-            zoom();
+            // limit has been set on zoom-out, zooming out past this point has a severe impact on performance
+            if(zoomLevel < 4){
+                zoomLevel += 1;
+                canvas.setZoom(canvas.getZoom() / 1.1);
+            }
+            canvas.renderAll();
+
+            //scale = scale*1.09;
+            //zoom();
         }
 
         function setInteractMode(){
@@ -1035,8 +1064,6 @@
 
         //  what to do when the mouse moves
         canvas.on('mouse:move', function(o){
-            canvas.remove(text);
-            canvas.renderAll();
 
             // do not do anything if mouse is not down
             if (!isDown) return;
