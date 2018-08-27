@@ -751,13 +751,15 @@
             var optFontSize;
             var xArrowWidth;
             var yArrowWidth;
+            var textboxHeight;
+            var arrowHeight;
 
             dims.forEach(o => {
 
                 if (o.category === 'dimX'){
                     console.log("Width: " + canvas.getActiveObject().getWidth());
 
-                    if (canvas.getActiveObject().getWidth() < 106){
+                    if (canvas.getActiveObject().getWidth() < 120){
                         optFontSize = 15;
                     }
                     else{
@@ -774,6 +776,7 @@
                     if (o.arrow === 'left'){
                         o.set({ left: canvas.getActiveObject().left});
                         xArrowWidth = o.getWidth();
+                        arrowHeight = o.getHeight();
                     }
 
                     if (canvas.getActiveObject().getWidth() < 50 && o.arrow === 'left' | o.arrow === 'right'){
@@ -784,7 +787,7 @@
                     }
 
                     if (o.isType('textbox')) {
-                        console.log("Textbox height: " + o.getHeight());
+
                         if (canvas.getActiveObject().getWidth() < 50){
                             o.set({ width: Math.round(canvas.getActiveObject().getWidth())});
                             o.set({ left: canvas.getActiveObject().left});
@@ -795,11 +798,13 @@
                         }
                         o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
                         valWidth = o.getWidth();
+                        textboxHeight = o.getHeight();
                     }
                     if (o.arrow === 'right'){
-                        console.log("Arrow height: " + o.getHeight());
                         o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
                     }
+
+
 
                     // anchor the dimension label keeping it from getting lost when the shape is scaled certain ways
                     /*if (o.getTop() < canvas.getActiveObject().getTop() - 55){
@@ -810,7 +815,7 @@
                     }*/
                 }
                 if (o.category === 'dimY'){
-                    if (canvas.getActiveObject().getHeight() < 106){
+                    if (canvas.getActiveObject().getHeight() < 120){
                         optFontSize = 15;
                     }
                     else{
@@ -865,7 +870,7 @@
 
                 }
                 if (o.category === 'dimCirc'){
-                    if (canvas.getActiveObject().getRadiusX()*2 < 106){
+                    if (canvas.getActiveObject().getRadiusX()*2 < 120){
                         optFontSize = 15;
                     }
                     else{
@@ -914,7 +919,7 @@
                     }*/
                 }
                 if (o.category === 'dimLine'){
-                    if (canvas.getActiveObject().lineLen < 106){
+                    if (canvas.getActiveObject().lineLen < 120){
                         optFontSize = 15;
                     }
                     else{
