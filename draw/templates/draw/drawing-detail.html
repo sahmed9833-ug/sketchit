@@ -74,9 +74,9 @@
             <button id="drawLine" type="button" class="btn btn-light" onclick="addLine()" title="Line"><strong>⟍</strong></button>&nbsp;
             <button id="drawMeasure" type="button" class="btn btn-light" onclick="addMeasure()" title="Line"><i class="fas fa-tape"></i></button>&nbsp;
             <button id="drawRect" type="button" class="btn btn-light" onclick="addRectangle()" title="Rectangle"><i class="far fa-square"></i></button>&nbsp;
-            <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle"><i class="far fa-circle"></i></button>&nbsp;
-            <button id ="undo" type="button" class="btn btn-light " onclick="undo()" title="Undo" style="margin-top: 10px"><i class="fas fa-undo"></i></button>&nbsp;
-            <button id ="redo" type="button" class="btn btn-light " onclick="redo()" title="Redo" style="margin-top: 10px"><i class="fas fa-redo"></i></button>&nbsp;
+            <button id ="drawCirc" type="button" class="btn btn-light" onclick="addCircle()" title="Circle" style="margin-top: 10px"><i class="far fa-circle"></i></button>&nbsp;
+            <!--<button id ="undo" type="button" class="btn btn-light " onclick="undo()" title="Undo" style="margin-top: 10px"><i class="fas fa-undo"></i></button>&nbsp;-->
+            <!--<button id ="redo" type="button" class="btn btn-light " onclick="redo()" title="Redo" style="margin-top: 10px"><i class="fas fa-redo"></i></button>&nbsp;-->
             <button id ="skewXMore" type="button" class="btn btn-light" onclick="skewXMore()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-plus"></i></button>
             <button id ="skewXLess" type="button" class="btn btn-light" onclick="skewXLess()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-minus"></i></button><br>
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object" style="margin-top: 10px"><i class="fas fa-eraser"></i></button>&nbsp;
@@ -94,6 +94,9 @@
         <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()">Manual Scale Adjust &nbsp;<i class="fas fa-i-cursor"></i></button>&nbsp;
         <button id ="zoomIn" type="button" class="btn btn-light" onclick="zoomIn()" title="Zoom in" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-plus"></i></button>&nbsp;
         <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;
+
+        <button id ="fontIncrease" type="button" class="btn btn-light" onclick="fontIncrease()" title="Increase font size">Font &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
+        <button id ="fontDecrease" type="button" class="btn btn-light" onclick="fontDecrease()" title="Decrease font size">Font &nbsp;<i class="fas fa-minus"></i></button>&nbsp;
         </div>
         <div class="col-2">
             <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Show or Hide selected shape's X dimension">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
@@ -203,8 +206,7 @@
         var canvasInteractive = true;
         var scalingMode = true;
         var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
-        var arrowWidth = 34.2;
-        var constStrokeWidth = 2;
+        //var arrowWidth = 34.2;
         var grid = 20;
         {% if drawing %}
             var scale = {{ drawing.scale }} / 20;
@@ -319,6 +321,24 @@
             document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
         }
 
+        function fontIncrease(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+
+            dims.forEach( o => {
+               o.set({ fontSize: o.fontSize + 1 });
+            });
+            scaleDimensions();
+        }
+
+        function fontDecrease(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+
+            dims.forEach( o => {
+               o.set({ fontSize: o.fontSize - 1 });
+            });
+            scaleDimensions();
+        }
+
         // copy+paste code from Fabric.js documentation: http://fabricjs.com/copypaste
         function duplicate(){
             var hopefullyUniqueId = Math.random().toString(16).slice(2);
@@ -414,8 +434,8 @@
                     canvas.remove(oldDim[0]);
 
                     dimXLeft = new fabric.Text('⟵', { id: line.id, arrow: 'left', category: 'dimLine', arrow: 'left', hidden: false, hasControls: false, fontSize: 29 });
-                    dimX = new fabric.Textbox(' ' + Math.round(line.lineLen*scale) + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false, top: 10, width: line.lineLen - arrowWidth*2, left: arrowWidth*1.3, hasControls: false, fontSize: 29 });
-                    dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: line.lineLen - arrowWidth*1.3, hasControls: false, fontSize: 29 });
+                    dimX = new fabric.Textbox(' ' + Math.round(line.lineLen*scale) + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false, top: 10, width: line.lineLen - dimXLeft.width*2, left: dimXLeft.width*1.3, hasControls: false, fontSize: 29 });
+                    dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: line.lineLen - dimXLeft.width*1.3, hasControls: false, fontSize: 29 });
 
                     var dimLine = new fabric.Group([dimXLeft, dimX, dimXRight], { left: line.left, top: line.top + 30, angle: line.lineAng, originX: 'center', id: line.id, category: 'dimLine', height: 10, hasControls: false });
                     console.log("Line angle: " + line.lineAng);
@@ -799,25 +819,46 @@
             dims.forEach(o => {
 
                 if (o.category === 'dimX'){
+                    console.log("Width: " + canvas.getActiveObject().getWidth());
 
                     if (canvas.getActiveObject().getWidth() < 106){
                         optFontSize = 15;
-                        xArrowWidth = 18;
                     }
                     else{
-                        optFontSize = 29;
-                        xArrowWidth = 34.2;
+                        if (o.fontSize == 15){
+                            optFontSize = 29;
+                        }
+                        else if (o.fontSize != 15 || o.fontSize != 29){
+                            optFontSize = o.fontSize;
+                        }
                     }
                     o.set({ fontSize: optFontSize });
 
-                    if (o.isType('textbox')) {
-                        o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
-                        o.set({ left: canvas.getActiveObject().left + xArrowWidth});
-                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
-                        valWidth = o.getWidth();
-                    }
                     if (o.arrow === 'left'){
                         o.set({ left: canvas.getActiveObject().left});
+                        xArrowWidth = o.getWidth();
+                    }
+
+                    if (canvas.getActiveObject().getWidth() < 50 && o.arrow === 'left' | o.arrow === 'right'){
+                        o.set({ opacity: 0 });
+                    }
+                    else if (canvas.getActiveObject().getWidth() > 50){
+                        o.set({ opacity: 100 });
+                    }
+
+                    if (o.isType('textbox')) {
+                        if (canvas.getActiveObject().getWidth() < 50){
+                            o.set({ width: Math.round(canvas.getActiveObject().getWidth())});
+                            o.set({ left: canvas.getActiveObject().left});
+                        }
+                        else{
+                            o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
+                            o.set({ left: canvas.getActiveObject().left + xArrowWidth});
+                        }
+
+
+                        o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
+                        valWidth = o.getWidth();
                     }
                     if (o.arrow === 'right'){
                         o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
@@ -834,19 +875,41 @@
                 if (o.category === 'dimY'){
                     if (canvas.getActiveObject().getHeight() < 106){
                         optFontSize = 15;
-                        yArrowWidth = 18;
                     }
                     else{
-                        optFontSize = 29;
-                        yArrowWidth = 34.2
+                        if (o.fontSize == 15){
+                            optFontSize = 29;
+                        }
+                        else if (o.fontSize != 15 || o.fontSize == 29){
+                            optFontSize = o.fontSize;
+                        }
                     }
                     o.set({ fontSize: optFontSize });
 
+                    if (o.arrow === 'left'){
+                        yArrowWidth = o.getWidth();
+                        o.set({ top: canvas.getActiveObject().top + yArrowWidth});
+                    }
+
+                    if (canvas.getActiveObject().getHeight() < 50 && o.arrow === 'left' | o.arrow === 'right'){
+                        o.set({ opacity: 0 });
+                    }
+                    else if (canvas.getActiveObject().getHeight() > 50){
+                        o.set({ opacity: 100 });
+                    }
+
                     if (o.isType('textbox')){
-                        o.set({ width: Math.round(canvas.getActiveObject().getHeight()) - yArrowWidth*2});
+                        if (canvas.getActiveObject().getHeight() < 50){
+                            o.set({ width: Math.round(canvas.getActiveObject().getHeight())});
+                            valHeight = o.getWidth();
+                            o.set({ top: canvas.getActiveObject().top + valHeight});
+                        }
+                        else{
+                            o.set({ width: Math.round(canvas.getActiveObject().getHeight()) - yArrowWidth*2});
+                            valHeight = o.getWidth();
+                            o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth});
+                        }
                         o.set({ text: ' ' + Math.round(canvas.getActiveObject().getHeight()*scale) + ' '})
-                        valHeight = o.getWidth();
-                        o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth});
                     }
                     if (o.arrow === 'left'){
                         o.set({ top: canvas.getActiveObject().top + yArrowWidth});
@@ -867,13 +930,22 @@
                 if (o.category === 'dimCirc'){
                     if (canvas.getActiveObject().getRadiusX()*2 < 106){
                         optFontSize = 15;
-                        xArrowWidth = 18;
                     }
                     else{
-                        optFontSize = 29;
-                        xArrowWidth = 34.2;
+                        if (o.fontSize == 15){
+                            optFontSize = 29;
+                        }
+                        else if (o.fontSize != 15 || o.fontSize != 29){
+                            optFontSize = o.fontSize;
+                        }
+
                     }
                     o.set({ fontSize: optFontSize });
+
+                    if (o.arrow === 'left'){
+                        o.set({ left: canvas.getActiveObject().left });
+                        xArrowWidth = o.getWidth();
+                    }
 
                     if (o.isType('textbox')){
                         o.set({ width: Math.round(canvas.getActiveObject().getRadiusX()*2) - xArrowWidth*2 });
