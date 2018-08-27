@@ -71,13 +71,15 @@
         <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()">Manual Scale Adjust &nbsp;<i class="fas fa-i-cursor"></i></button>&nbsp;
         <button id ="zoomIn" type="button" class="btn btn-light" onclick="zoomIn()" title="Zoom in" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-plus"></i></button>&nbsp;
         <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;
-
-        <button id ="fontIncrease" type="button" class="btn btn-light" onclick="fontIncrease()" title="Increase font size">Font &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
-        <button id ="fontDecrease" type="button" class="btn btn-light" onclick="fontDecrease()" title="Decrease font size">Font &nbsp;<i class="fas fa-minus"></i></button>&nbsp;
+        <button id ="fontIncreaseX" type="button" class="btn btn-light" onclick="fontIncreaseX()" title="Increase font size"><i class="fas fa-arrows-alt-h"></i> &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
+        <button id ="fontDecreaseX" type="button" class="btn btn-light" onclick="fontDecreaseX()" title="Decrease font size"><i class="fas fa-arrows-alt-h"></i> &nbsp;<i class="fas fa-minus"></i></button>&nbsp;
+        <button id ="fontDecreaseY" type="button" class="btn btn-light" onclick="fontIncreaseY()" title="Decrease font size"><i class="fas fa-arrows-alt-v"></i> &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
+        <button id ="fontDecreaseY" type="button" class="btn btn-light" onclick="fontDecreaseY()" title="Decrease font size"><i class="fas fa-arrows-alt-v"></i> &nbsp;<i class="fas fa-minus"></i></button>&nbsp;
         </div>
         <div class="col-2">
             <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Show or Hide selected shape's X dimension">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
             <button id ="hideDimY" type="button" class="btn btn-light" onclick="hideDimY()" title="Show or Hide selected shape's Y dimension" style="margin-top: 10px">Show/Hide <i class="fas fa-arrows-alt-v"></i></button>&nbsp;
+            <button id ="restFont" type="button" class="btn btn-light" onclick="resetFont()" title="Rest font size" style="margin-top: 10px"> Font <i class="fas fa-undo"></i></i></button>&nbsp;
         </div>
         <div class="col-2">
             <div class="input-group">
@@ -94,7 +96,7 @@
         </div>
     </div>
         <canvas id="c" width="800" height="700" style="border: 1px solid black; margin-top: 5px"></canvas>
-    <script>
+   <script>
         //  override library's controls appearance
         fabric.Object.prototype.set({
             borderColor: 'green',
@@ -213,8 +215,8 @@
             document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
         }
 
-        function fontIncrease(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+        function fontIncreaseX(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
 
             dims.forEach( o => {
                o.set({ fontSize: o.fontSize + 1 });
@@ -222,11 +224,37 @@
             scaleDimensions();
         }
 
-        function fontDecrease(){
-            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+        function fontDecreaseX(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimX' | o.category === 'dimCirc' | o.category === 'dimLine');
 
             dims.forEach( o => {
                o.set({ fontSize: o.fontSize - 1 });
+            });
+            scaleDimensions();
+        }
+
+        function fontIncreaseY(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimY');
+
+            dims.forEach( o => {
+               o.set({ fontSize: o.fontSize + 1 });
+            });
+            scaleDimensions();
+        }
+
+        function fontDecreaseY(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'dimY');
+
+            dims.forEach( o => {
+               o.set({ fontSize: o.fontSize - 1 });
+            });
+            scaleDimensions();
+        }
+
+        function resetFont(){
+            var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
+            dims.forEach( o => {
+               o.set({ fontSize: 29 });
             });
             scaleDimensions();
         }
@@ -378,41 +406,6 @@
         function skewXLess(){
             canvas.getActiveObject().set({ skewX: canvas.getActiveObject().skewX - 5 });
             canvas.renderAll();
-        }
-
-        function zoom(){
-
-            var assocShape = canvas.getObjects().filter(o => o.category === 'shape');
-
-            for(i = 0; i < assocShape.length; i++){
-                console.log("A shape!");
-                var dims = canvas.getObjects().filter(o => o.category !== 'shape' && o.id == assocShape[i].id);
-
-                dims.forEach( o => {
-                    console.log("A dim!");
-                    if (o.isType('textbox')){
-
-                        if (o.category === 'dimLine'){
-                            var desiredLen = o.text;
-                            var lenMultiplyer = desiredLen / (assocShape[i].lineLen*scale);
-                            var orgWidth = assocShape[i].width;
-                            assocShape[i].setWidth((assocShape[i].width*lenMultiplyer) / assocShape[i].scaleX);
-                            assocShape[i].setHeight((assocShape[i].height*lenMultiplyer) / assocShape[i].scaleY);
-
-                            assocShape[i].set({ lineLen: Math.sqrt(Math.pow(assocShape[i].getHeight(), 2) + Math.pow(assocShape[0].getWidth(), 2)) });
-                            assocShape[i].set({ left: assocShape[i].left });
-                            console.log("Left now: " + assocShape[i].left);
-                        }
-                        else{
-                            canvas.setActiveObject(o);
-                            transformDrawing(assocShape, i);
-                        }
-
-                    }
-                });
-                canvas.setActiveObject(assocShape[i]);
-                scaleDimensions();
-            }
         }
 
         var zoomLevel = 0;
@@ -597,7 +590,8 @@
                     o.set({ opacity: 0, selectable: false, hidden: true });
                 }
             });
-            canvas.renderAll();
+            //canvas.renderAll();
+            scaleDimensions();
         }
 
         function hideDimY(){
@@ -611,7 +605,8 @@
                     o.set({ opacity: 0, selectable: false, hidden: true });
                 }
             });
-            canvas.renderAll();
+            //canvas.renderAll();
+            scaleDimensions();
         }
 
         function transformDrawing(assocShape, i){
@@ -724,6 +719,7 @@
                             optFontSize = o.fontSize;
                         }
                     }
+
                     o.set({ fontSize: optFontSize });
 
                     if (o.arrow === 'left'){
@@ -734,11 +730,12 @@
                     if (canvas.getActiveObject().getWidth() < 50 && o.arrow === 'left' | o.arrow === 'right'){
                         o.set({ opacity: 0 });
                     }
-                    else if (canvas.getActiveObject().getWidth() > 50){
+                    else if (canvas.getActiveObject().getWidth() > 50 && !o.hidden){
                         o.set({ opacity: 100 });
                     }
 
                     if (o.isType('textbox')) {
+                        console.log("Textbox height: " + o.getHeight());
                         if (canvas.getActiveObject().getWidth() < 50){
                             o.set({ width: Math.round(canvas.getActiveObject().getWidth())});
                             o.set({ left: canvas.getActiveObject().left});
@@ -747,12 +744,11 @@
                             o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
                             o.set({ left: canvas.getActiveObject().left + xArrowWidth});
                         }
-
-
                         o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
                         valWidth = o.getWidth();
                     }
                     if (o.arrow === 'right'){
+                        console.log("Arrow height: " + o.getHeight());
                         o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
                     }
 
@@ -786,7 +782,7 @@
                     if (canvas.getActiveObject().getHeight() < 50 && o.arrow === 'left' | o.arrow === 'right'){
                         o.set({ opacity: 0 });
                     }
-                    else if (canvas.getActiveObject().getHeight() > 50){
+                    else if (canvas.getActiveObject().getHeight() > 50 && !o.hidden){
                         o.set({ opacity: 100 });
                     }
 
@@ -830,13 +826,21 @@
                         else if (o.fontSize != 15 || o.fontSize != 29){
                             optFontSize = o.fontSize;
                         }
-
                     }
+
+
                     o.set({ fontSize: optFontSize });
 
                     if (o.arrow === 'left'){
                         o.set({ left: canvas.getActiveObject().left });
                         xArrowWidth = o.getWidth();
+                    }
+
+                    if (canvas.getActiveObject().getRadiusX()*2 < 50 && o.arrow === 'left' | o.arrow === 'right'){
+                        o.set({ opacity: 0 });
+                    }
+                    else if (canvas.getActiveObject().getRadiusX()*2 > 50 && !o.hidden){
+                        o.set({ opacity: 100 });
                     }
 
                     if (o.isType('textbox')){
