@@ -80,7 +80,6 @@ var text;
 var canvasInteractive = true;
 var scalingMode = true;
 var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
-//var scale;
 var grid = 20;
 loadJSON();
 renderGrid();
@@ -283,7 +282,6 @@ function addMeasure(){
                 console.log("Flipped " + dimX.getFlipX());
             }
 
-            //dimX = new fabric.Textbox(' ' + 100 + ' ', { textAlign: 'center', id: line.id, category: 'dimLine', hidden: false });
             canvas.add(dimLine);
         }
     }
@@ -1008,7 +1006,7 @@ canvas.on('mouse:up', function(o){
         canvas.getActiveObject().selectAll();
     }
 
-    // if user had clicked on an arrow (which is of type 'text')
+    // if user had clicked on an arrow (which is of type 'text'), call scaleDimensions() to correct positioning
     if (canvas.getActiveObject() && canvas.getActiveObject().isType('text')){
         //  Code for setting dim position offset here.
         var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
