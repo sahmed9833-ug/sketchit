@@ -22,10 +22,9 @@ fabric.Object.prototype._renderStroke = function (ctx) {
     ctx.restore();
 };
 
-// const _getTransformedDimensions = fabric.Object.prototype._getTransformedDimensions;
+
 fabric.Object.prototype._getTransformedDimensions = function (skewX, skewY) {
-    // if (!this.strokeUniform)
-    //     return _getTransformedDimensions.call(this, e, t);
+
     if (typeof skewX === 'undefined') {
         skewX = this.skewX;
     }
@@ -49,7 +48,7 @@ fabric.Object.prototype._getTransformedDimensions = function (skewX, skewY) {
         y: dimY
     }];
     const transformMatrix = this._calcDimensionsTransformMatrix(skewX, skewY, false);
-    for (let i = 0; i < points.length; i++) {
+    for (var i = 0; i < points.length; i++) {
         points[i] = fabric.util.transformPoint(points[i], transformMatrix);
     }
     const bbox = fabric.util.makeBoundingBoxFromPoints(points);
@@ -77,19 +76,12 @@ var drawingRect = false;
 var drawingCircle = false;
 
 var drawingLine = false;
-var arr = [];
-var startx = [];
-var endx = [];
-var starty = [];
-var endy = [];
-var temp = 0;
 var text;
 var canvasInteractive = true;
 var scalingMode = true;
-let rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
-//var arrowWidth = 34.2;
+var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
+//var scale;
 var grid = 20;
-var scale = 0.25;
 loadJSON();
 renderGrid();
 setInteractive();
@@ -125,18 +117,15 @@ function loadJSON(){
 function posUp(){
     var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category !== 'shape');
 
-
     canvas.getActiveObject().bringForward();
     dims.forEach( o => {
         o.bringToFront();
     });
-    //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
     document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
 }
 
 function posDown(){
     canvas.getActiveObject().sendBackwards();
-    //console.log(canvas.getObjects().indexOf(canvas.getActiveObject()));
     document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
 }
 
@@ -794,6 +783,7 @@ canvas.on('text:editing:exited', function(o){
     let assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
     let shapes = canvas.getObjects().filter(o => o.category === 'shape');
 
+    //  when in scaling mode, use the inputted value to alter the canvas's scale value.
     if(scalingMode){
         if(canvas.getActiveObject().category === 'dimX'){
             scale = canvas.getActiveObject().text/assocShape[0].getWidth();
@@ -807,6 +797,8 @@ canvas.on('text:editing:exited', function(o){
         else if(canvas.getActiveObject().category === 'dimLine'){
             scale = canvas.getActiveObject().text/assocShape[0].lineLen;
         }
+
+        // once new scale value has been set, iterate over all shapes and make sure their measurements are updated.
         document.getElementById("scaleInput").value = scale*20;
         shapes.forEach( o => {
             canvas.setActiveObject(o);
@@ -814,6 +806,7 @@ canvas.on('text:editing:exited', function(o){
         });
     }
     else{
+        // if not in scaling mode, call the transform drawing method to transform the selected shape.
         transformDrawing(assocShape, 0);
         scaleDimensions();
     }
@@ -826,6 +819,7 @@ canvas.on('mouse:down', function(o){
     origX = pointer.x;
     origY = pointer.y;
 
+    // create shape with some initial properties, depending on which drawing mode is currently selected.
     if (drawingRect){
         rect = new fabric.Rect({
             left: origX,
@@ -862,8 +856,6 @@ canvas.on('mouse:down', function(o){
     }
     if (drawingLine){
         let points = [pointer.x, pointer.y, pointer.x, pointer.y];
-        startx[temp] = pointer.x;
-        starty[temp] = pointer.y;
         line = new fabric.Line(points, {
             originX: 'center',
             originY: 'center',
@@ -873,12 +865,12 @@ canvas.on('mouse:down', function(o){
         });
         canvas.add(line);
     }
+
+    // if the canvas is currently set to interactive, enable for the below methods to be called by interaction events
     if (canvasInteractive){
         if (canvas.getActiveObject()){
-
             canvas.getActiveObject().on('moving', updateDimensions);
-            //canvas.getActiveObject().on('rotating', updateDimensions);
-
+            canvas.getActiveObject().on('rotating', updateDimensions);
             canvas.getActiveObject().on('scaling', scaleDimensions);
             bindDimensions();
         }
@@ -888,9 +880,12 @@ canvas.on('mouse:down', function(o){
 //  what to do when the mouse moves
 canvas.on('mouse:move', function(o){
 
-    // do not do anything if mouse is not down
+    // do not do anything if mouse button is not down
     if (!isDown) return;
+
     let pointer = canvas.getPointer(o.e);
+
+    // set dimensions and position of shape, depending on which mode is currently active.
     if (drawingRect){
         if(origX>pointer.x){
         rect.set({ left: Math.abs(pointer.x) });
@@ -914,23 +909,26 @@ canvas.on('mouse:move', function(o){
     }
     if (drawingLine){
         line.set({ x2: pointer.x, y2: pointer.y });
-
-        endx[temp] = pointer.x;
-        endy[temp] = pointer.y;
     }
 });
 
 //  what do when mouse button is lifted
 canvas.on('mouse:up', function(o){
-    //canvas.remove(text);
+    // mouse is no longer down
     isDown = false;
+
+    // randomly generated-string being used as unique ID for shapes. While the chance of ID clashing is extremely low,
+    // it would still be a good idea to implement some validation here just to be sure.
     let hopefullyUniqueId = Math.random().toString(16).slice(2);
     let currentShape;
+
+    // depending on which shape is currently being drawn, set some initial values, create dimensions for the shape
     if(drawingRect){
         currentShape = rect;
         rect.set({ id: hopefullyUniqueId });
         rect.setControlsVisibility({ mtr: false });
 
+        // if the shape has dimensions 0/0, we should not create dimensions for it.
         if (rect.width !== 0 && rect.height !== 0){
 
             dimXLeft = new fabric.Text('⟵', { arrow: 'left', id: rect.id, category: 'dimX', top: rect.top - 50 });
@@ -941,9 +939,10 @@ canvas.on('mouse:up', function(o){
             dimY = new fabric.Textbox(' ' + Math.round(rect.getHeight()*scale) + ' ', { angle: 270, textAlign: 'center', id: rect.id, category: 'dimY', left: rect.left - 50 });
             dimYBottom = new fabric.Text('⟵', { angle: 270, id: rect.id, arrow: 'right', category: 'dimY', left: rect.left - 50 });
 
+            // .setCoords() is important, required in order for the shape to be interactive.
             rect.setCoords();
+            // add the newly created dimension measurements to canvas
             canvas.add(dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom);
-
         }
     }
     else if (drawingCircle){
@@ -963,10 +962,12 @@ canvas.on('mouse:up', function(o){
         currentShape = line;
         line.set({ id: hopefullyUniqueId });
 
-        let lineAngle = Math.atan2(endy[temp] - starty[temp], endx[temp] - startx[temp]);
+        // use line's coordinates to calculate angle, then set the value as a property.
+        let lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
         lineAngle *= 180 / Math.PI;
         line.set({ lineAng: lineAngle });
 
+        // lines act as a diagonal of a box, use the box's height and width to get the length.
         let lineLen = Math.sqrt(Math.pow(line.getHeight(), 2) + Math.pow(line.getWidth(), 2));
         line.set({ lineLen: lineLen });
 
@@ -976,32 +977,38 @@ canvas.on('mouse:up', function(o){
 
     //  Apply common properties to dimension objects
     if (drawingRect  || drawingCircle || drawingLine){
+        // the dimensions to be modified depends on the shape being drawn.
         let dims = [dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom];
+
+        // circles do not have a y-measurement
         if (!drawingRect){
             dims = [dimXLeft, dimX, dimXRight]
         }
+        // lines only have a single value, with no arrows.
         if (drawingLine){
             dims = [dimX];
         }
+        // iterate over the array, apply common properties
         dims.forEach(function (dimObject) {
             //  Set common properties
             dimObject.set({ fontSize: 29, hidden: false, positionOffset: 0, hasControls: false });
         });
 
+        // select the newly drawn shape, then run scaleDimensions() to adjust positioning etc. and set interative mode on
         canvas.setActiveObject(currentShape);
         scaleDimensions();
         scaleDimensions();
-
         setInteractMode();
-        //tempSave();
     }
 
-    //  if user (single) clicked on a textbox, enter editing mode and highlight all contents.
+    // if user (single) clicked on a measurement value (which is of type 'textbox')
+    // enter editing mode and highlight all contents.
     if (canvas.getActiveObject() && canvas.getActiveObject().isType('textbox') ){
         canvas.getActiveObject().enterEditing();
         canvas.getActiveObject().selectAll();
     }
 
+    // if user had clicked on an arrow (which is of type 'text')
     if (canvas.getActiveObject() && canvas.getActiveObject().isType('text')){
         //  Code for setting dim position offset here.
         var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
@@ -1013,5 +1020,4 @@ canvas.on('mouse:up', function(o){
     document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
     setInteractive();
     setInteractive();
-
 });
