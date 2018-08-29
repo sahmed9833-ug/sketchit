@@ -79,7 +79,7 @@ var drawingLine = false;
 var text;
 var canvasInteractive = true;
 var scalingMode = true;
-var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, origX, origY;
+var rect, circ, dimXLeft, dimX, dimXRight, dimYTop, dimY, dimYBottom, isDown, isDragging, origX, origY;
 var grid = 20;
 loadJSON();
 renderGrid();
@@ -87,8 +87,36 @@ setInteractive();
 canvas.renderAll();
 
 // use the download library to download a PNG version of the drawing
-function convertToImage() {
+// Note: download() is not compatible with iOS devices
+function exportPNG() {
     download(canvas.toDataURL('png'), 'sketch', 'image/png');
+}
+
+// uses Imgur's API to upload a PNG version to their service, then directs them
+function exportImgur() {
+    try {
+        var img = canvas.toDataURL('png').split(',')[1];
+    } catch(e) {
+        var img = canvas.toDataURL().split(',')[1];
+    }
+
+    $.ajax({
+        url: 'https://api.imgur.com/3/image',
+        type: 'post',
+        headers: {
+            Authorization: 'Client-ID 979a33e5ac6069c'
+        },
+        data: {
+            title: 'Sketch from: ' + new Date().toLocaleString(),
+            image: img
+        },
+        dataType: 'json',
+        success: function(response) {
+            if(response.success) {
+                window.open(response.data.link,'_blank');
+            }
+        }
+    });
 }
 
 //  Saves drawing
@@ -540,7 +568,7 @@ var multiply = fabric.util.multiplyTransformMatrices;
 var invert = fabric.util.invertTransform;
 function updateDimensions() {
 
-    if (canvas.getActiveObject().isType('text') || canvas.getActiveObject().category === 'dimLine'){
+    if (canvas.getActiveObject().isType('text') || canvas.getActiveObject().isType('textbox') || canvas.getActiveObject().category === 'dimLine'){
         // code to move the selected dim's counterparts, so that they all move instead of just single arrow
         var assocDims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === canvas.getActiveObject().category);
 
@@ -882,7 +910,7 @@ canvas.on('mouse:move', function(o){
     if (!isDown) return;
 
     let pointer = canvas.getPointer(o.e);
-
+    isDragging = true;
     // set dimensions and position of shape, depending on which mode is currently active.
     if (drawingRect){
         if(origX>pointer.x){
@@ -914,6 +942,7 @@ canvas.on('mouse:move', function(o){
 canvas.on('mouse:up', function(o){
     // mouse is no longer down
     isDown = false;
+
 
     // randomly generated-string being used as unique ID for shapes. While the chance of ID clashing is extremely low,
     // it would still be a good idea to implement some validation here just to be sure.
@@ -1001,13 +1030,13 @@ canvas.on('mouse:up', function(o){
 
     // if user (single) clicked on a measurement value (which is of type 'textbox')
     // enter editing mode and highlight all contents.
-    if (canvas.getActiveObject() && canvas.getActiveObject().isType('textbox') ){
+    if (canvas.getActiveObject() && !isDragging && canvas.getActiveObject().isType('textbox')){
         canvas.getActiveObject().enterEditing();
         canvas.getActiveObject().selectAll();
     }
 
     // if user had clicked on an arrow (which is of type 'text'), call scaleDimensions() to correct positioning
-    if (canvas.getActiveObject() && canvas.getActiveObject().isType('text')){
+    if (canvas.getActiveObject() && isDragging && !canvas.getActiveObject().isType('shape')){
         //  Code for setting dim position offset here.
         var assocShape = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === 'shape');
 
@@ -1016,6 +1045,7 @@ canvas.on('mouse:up', function(o){
         scaleDimensions();
     }
     document.getElementById('posVal').value = canvas.getObjects().indexOf(canvas.getActiveObject());
+    isDragging = false;
     setInteractive();
     setInteractive();
 });
