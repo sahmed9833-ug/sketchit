@@ -56,7 +56,7 @@
             <button id ="skewXMore" type="button" class="btn btn-light" onclick="skewXMore()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-plus"></i></button>
             <button id ="skewXLess" type="button" class="btn btn-light" onclick="skewXLess()" title="Skew Rectangle" style="margin-top: 10px">Skew <i class="fas fa-minus"></i></button><br>
             <button id ="deleteSelected" type="button" class="btn btn-light" onclick="deleteSelected()" title="Erase selected object" style="margin-top: 10px"><i class="fas fa-eraser"></i></button>&nbsp;
-            <button id ="clearCanvas" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas" style="margin-top: 10px"><i class="fas fa-trash-alt"></i></button>
+
         </div>
         <div class="col-4">
             <div class="input-group">
@@ -66,9 +66,9 @@
                 <input id="scaleInput" type="text" class="form-control" onblur="updateScale()" placeholder="0.25" value="5">&nbsp;
 
             </div>
-        <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()">Manual Scale Adjust &nbsp;<i class="fas fa-i-cursor"></i></button>&nbsp;
+        <button id="setScaling" type="button" class="btn btn-dark" onclick="setScalingMode()">Scaling Mode ON</button>&nbsp;
         <button id ="zoomIn" type="button" class="btn btn-light" onclick="zoomIn()" title="Zoom in" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-plus"></i></button>&nbsp;
-        <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;
+        <button id ="zoomOut" type="button" class="btn btn-light" onclick="zoomOut()" title="Zoom out" style="margin-top: 10px; margin-bottom: 10px"><i class="fas fa-search-minus"></i></button>&nbsp;<br>
         <button id ="fontIncreaseX" type="button" class="btn btn-light" onclick="fontIncreaseX()" title="Increase font size"><i class="fas fa-arrows-alt-h"></i> &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
         <button id ="fontDecreaseX" type="button" class="btn btn-light" onclick="fontDecreaseX()" title="Decrease font size"><i class="fas fa-arrows-alt-h"></i> &nbsp;<i class="fas fa-minus"></i></button>&nbsp;
         <button id ="fontDecreaseY" type="button" class="btn btn-light" onclick="fontIncreaseY()" title="Decrease font size"><i class="fas fa-arrows-alt-v"></i> &nbsp;<i class="fas fa-plus"></i></button>&nbsp;
@@ -78,6 +78,7 @@
             <button id ="hideDimX" type="button" class="btn btn-light" onclick="hideDimX()" title="Show or Hide selected shape's X dimension">Show/Hide <i class="fas fa-arrows-alt-h"></i></button>&nbsp;
             <button id ="hideDimY" type="button" class="btn btn-light" onclick="hideDimY()" title="Show or Hide selected shape's Y dimension" style="margin-top: 10px">Show/Hide <i class="fas fa-arrows-alt-v"></i></button>&nbsp;
             <button id ="restFont" type="button" class="btn btn-light" onclick="resetFont()" title="Rest font size" style="margin-top: 10px"> Font <i class="fas fa-undo"></i></i></button>&nbsp;
+            <button id ="clearCanvas" type="button" class="btn btn-danger" onclick="clearCanvas()" title="Clear canvas" style="margin-top: 10px">Drawing &nbsp;<i class="fas fa-trash-alt"></i></button>
         </div>
         <div class="col-2">
             <div class="input-group">

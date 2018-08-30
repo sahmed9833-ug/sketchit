@@ -233,7 +233,6 @@ function duplicate(){
             var dimXRight = new fabric.Text('⟶', { id: clonedObj.id, arrow: 'right', category: dimXes[0].category, left: clonedObj.left+100, top: dimXes[0].top + 10, hidden: dimXes[0].hidden, fontSize: dimXes[0].fontSize });
 
         if (dimYes[0] !== undefined){
-            console.log("This a rectangle");
             var dimYTop = new fabric.Text('⟶', { angle: 270, id: clonedObj.id, arrow: 'left', category: 'dimY', left: dimYes[0].left + 10, hidden: dimYes[0].hidden, fontSize: dimYes[0].fontSize });
             var dimY = new fabric.Textbox(' ' + Math.round(clonedObj.getHeight()*scale) + ' ', { angle: 270, textAlign: 'center', id: clonedObj.id, category: 'dimY', left: dimYes[0].left + 10, hidden: dimYes[0].hidden, fontSize: dimYes[0].fontSize });
             var dimYBottom = new fabric.Text('⟵', { angle: 270, id: clonedObj.id, arrow: 'right', category: 'dimY', left: dimYes[0].left + 10, hidden: dimYes[0].hidden, fontSize: dimYes[0].fontSize });
@@ -300,14 +299,13 @@ function addMeasure(){
             dimXRight = new fabric.Text('⟶', { id: line.id, category: 'dimLine', arrow: 'right', hidden: false, left: line.lineLen - dimXLeft.width*1.3, hasControls: false, fontSize: 29 });
 
             let dimLine = new fabric.Group([dimXLeft, dimX, dimXRight], { left: line.left, top: line.top + 30, angle: line.lineAng, originX: 'center', id: line.id, category: 'dimLine', height: 10, hasControls: false });
-            console.log("Line angle: " + line.lineAng);
+
 
 
             if (line.lineAng > 90 || line.lineAng < -90){
 
                 dimX.toggle('flipX');
                 dimX.toggle('flipY');
-                console.log("Flipped " + dimX.getFlipX());
             }
 
             canvas.add(dimLine);
@@ -317,7 +315,6 @@ function addMeasure(){
 
 //  create grid - must account for zooming out.
 function renderGrid(){
-    console.log("Rendering grid..");
     for (let i = 0; i < (1500 / grid); i++) {
         let lineH = new fabric.Line([ i * grid, 0, i * grid, 1500], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
         let lineV = new fabric.Line([ 0, i * grid, 1500, i * grid], { stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true, id: 'grid' });
@@ -333,10 +330,12 @@ function setScalingMode(){
     if (scalingMode){
         scalingMode = false;
         document.getElementById("setScaling").className = "btn btn-light";
+        document.getElementById("setScaling").textContent = "Scaling Mode OFF";
     }
     else{
         scalingMode = true;
         document.getElementById("setScaling").className += " btn-dark";
+        document.getElementById("setScaling").textContent = "Scaling Mode ON";
     }
 }
 
@@ -465,7 +464,6 @@ function updateScale(){
 
     let shapes = canvas.getObjects().filter(o => o.category === 'shape');
     scale = document.getElementById('scaleInput').value/20;
-    console.log("Scale is: " + scale);
 
     document.getElementById("scaleInput").value = scale*20;
         shapes.forEach( o => {
@@ -563,12 +561,15 @@ function transformDrawing(assocShape, i){
 
 }
 
+// this method is responsible for ensuring a shape's dimensions move in sync.
 // code from documentation: http://fabricjs.com/using-transformations
 var multiply = fabric.util.multiplyTransformMatrices;
 var invert = fabric.util.invertTransform;
 function updateDimensions() {
 
+    // if the selected shape is actually a dimension measurement
     if (canvas.getActiveObject().isType('text') || canvas.getActiveObject().isType('textbox') || canvas.getActiveObject().category === 'dimLine'){
+
         // code to move the selected dim's counterparts, so that they all move instead of just single arrow
         var assocDims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && o.category === canvas.getActiveObject().category);
 
@@ -596,8 +597,10 @@ function updateDimensions() {
         return;
     }
 
+    // get array of selected shape's dimensions
     var dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id && !canvas.getActiveObject().isType('path'));
 
+    // iterate over each one to translate transformations done on the shape
     dims.forEach(o => {
         if (!o.relationship) {
             return;
@@ -620,18 +623,23 @@ function updateDimensions() {
     });
 }
 
+// this function handles the updating and positioning of measurement labels.
 function scaleDimensions(){
+    // get array of the selected shape's dimension labels
     let dims = canvas.getObjects().filter(o => o.id === canvas.getActiveObject().id);
     let valWidth, valHeight, valCirc;
     let optFontSize;
     let xArrowWidth;
     let yArrowWidth;
-    let textboxHeight;
     let arrowHeight;
 
+    // iterate over each dimension label item
     dims.forEach(o => {
 
+        // if the dimension is for measuring the x-dimension
         if (o.category === 'dimX'){
+
+            // adjust fontSize if shape width is below a certain threshold
             if (canvas.getActiveObject().getWidth() < 120){
                 optFontSize = 15;
             }
@@ -644,14 +652,18 @@ function scaleDimensions(){
                 }
             }
 
+            // set fontSize
             o.set({ fontSize: optFontSize });
 
             if (o.arrow === 'left'){
+                // set new position for left arrow
                 o.set({ left: canvas.getActiveObject().left});
+                // also get new width and height for arrow, required for positioning of the textbox portion of dimension label
                 xArrowWidth = o.getWidth();
                 arrowHeight = o.getHeight();
             }
 
+            // if the shape falls below a further width threshold, make the arrows disappear
             if (canvas.getActiveObject().getWidth() < 50 && o.arrow === 'left' | o.arrow === 'right'){
                 o.set({ opacity: 0 });
             }
@@ -659,24 +671,32 @@ function scaleDimensions(){
                 o.set({ opacity: 100 });
             }
 
-            if (o.isType('textbox')) {
 
+            if (o.isType('textbox')) {
+                // fully center the textbox if the shape reaches a certain width threshold
                 if (canvas.getActiveObject().getWidth() < 50){
                     o.set({ width: Math.round(canvas.getActiveObject().getWidth())});
                     o.set({ left: canvas.getActiveObject().left});
                 }
                 else{
+                    // if not, width must account for width of the arrows
                     o.set({ width: Math.round(canvas.getActiveObject().getWidth()) - xArrowWidth * 2});
+                    // as must the position
                     o.set({ left: canvas.getActiveObject().left + xArrowWidth});
                 }
+
+                // set text to whatever the width is
                 o.set({ text: ' ' + Math.round(canvas.getActiveObject().getWidth() * scale)  + ' '});
-                valWidth = o.getWidth();
-                textboxHeight = o.getHeight();
+
+                // get height and width
+                valWidth = o.getWidth()
             }
             if (o.arrow === 'right'){
+                // position of right arrow needs to account for textbox width and left arrow width
                 o.set({ left: canvas.getActiveObject().left + valWidth + xArrowWidth});
             }
         }
+        // if dimension label is for Y-dimension
         if (o.category === 'dimY'){
             if (canvas.getActiveObject().getHeight() < 120){
                 optFontSize = 15;
@@ -723,6 +743,7 @@ function scaleDimensions(){
                 o.set({ top: canvas.getActiveObject().top + valHeight + yArrowWidth*2 - 2});
             }
         }
+        // if dimension label is for a circle
         if (o.category === 'dimCirc'){
             if (canvas.getActiveObject().getRadiusX()*2 < 120){
                 optFontSize = 15;
@@ -775,7 +796,6 @@ function scaleDimensions(){
             if (o.isType('textbox')){
                 let newLen = Math.sqrt(Math.pow(canvas.getActiveObject().getHeight(), 2) + Math.pow(canvas.getActiveObject().getWidth(), 2));
                 canvas.getActiveObject().set({ lineLen: newLen });
-                console.log("Line length: " + newLen*scale);
 
 
                 o.set({ fontSize: optFontSize });
